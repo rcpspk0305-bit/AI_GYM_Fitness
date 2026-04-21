@@ -1,0 +1,678 @@
+# AI Gym & Fitness Assistant
+
+> A full-stack AI-powered fitness ecosystem — React frontend + FastAPI backend.
+---
+
+## What This Project Does
+
+The AI Gym & Fitness Assistant is an all-in-one platform that combines computer vision, machine learning, NLP, and retrieval-augmented generation (RAG) into a single unified fitness app. It acts as a smart personal trainer, dietician, motivational companion, and data-driven fitness manager.
+
+---
+
+## Modules
+
+| # | Module | Description |
+|---|--------|-------------|
+| 1 | **AI Gym Trainer** | Real-time pose detection for squats, left/right bicep curls, and posture analysis using MediaPipe |
+| 2 | **AI Dietician** | Personalised diet plans using RAG (ChromaDB) + Gemini LLM with BMI/BMR/TDEE calculation |
+| 3 | **Smart Gym Assistant** | Intelligent equipment recommendations based on user workout history |
+| 4 | **Habit Tracker** | Daily gym attendance logging with RandomForest ML skip prediction and streak tracking |
+| 5 | **Virtual Gym Buddy** | Motivational AI chat companion with VADER + TextBlob sentiment analysis and RAG context |
+| 6 | **Performance Analyzer** | Biomechanical motion efficiency scoring with non-linear NumPy scaling |
+| 7 | **Gym Recommender** | Weekly workout plan generator using cosine similarity ML across 22 workout templates |
+| — | **Interactive Dashboard** | Live aggregated stats from all modules — animated counters, performance rings, habit bars, sentiment visualisation |
+
+---
+
+## Tech Stack
+
+### Frontend
+| Layer | Technology |
+|-------|-----------|
+| Framework | React 18 + Vite |
+| Routing | React Router v6 |
+| HTTP | Axios |
+| Pose Detection | MediaPipe Pose (loaded via CDN — window.Pose / window.Camera) |
+| Styling | Inline styles |
+
+### Backend
+| Layer | Technology |
+|-------|-----------|
+| API Framework | FastAPI (Python 3.12) |
+| Server | Uvicorn with hot reload |
+| ORM | SQLAlchemy |
+| Database | SQLite (`data/gym_assistant.db`) |
+| Vector DB | ChromaDB (RAG for diet + buddy modules) |
+| LLM | Google Gemini 2.0 Flash (`google-genai`) |
+| ML | scikit-learn — RandomForestClassifier + cosine similarity |
+| NLP | VADER Sentiment + TextBlob |
+| CV | MediaPipe Pose + OpenCV |
+| Cloud Storage | Cloudinary (progress photos) |
+
+---
+
+## Project Structure
+
+```
+ai_gym_assistant/
+│
+├── frontend/
+│   ├── index.html                  ← MediaPipe CDN scripts in <head>
+│   ├── src/
+│   │   ├── App.jsx                 ← Router + navigation bar
+│   │   └── pages/
+│   │       ├── Dashboard.jsx       ← Interactive live dashboard
+│   │       ├── Trainer.jsx         ← Module 1 — pose detection
+│   │       ├── Dietician.jsx       ← Module 2 — diet planner
+│   │       ├── Habit.jsx           ← Module 4 — habit tracker
+│   │       ├── Buddy.jsx           ← Module 5 — AI chat
+│   │       └── Recommender.jsx     ← Module 7 — workout planner
+│   └── package.json
+│
+└── backend/
+    ├── main.py                     ← FastAPI entry + /dashboard endpoint
+    ├── database.py                 ← SQLAlchemy models (7 tables)
+    ├── .env                        ← API keys (not committed to git)
+    ├── requirements.txt
+    ├── data/
+    │   ├── gym_assistant.db        ← SQLite database (auto-created)
+    │   └── workout_log.csv         ← Habit tracker CSV backup
+    ├── chroma_db/                  ← ChromaDB vector store (auto-created)
+    └── modules/
+        ├── __init__.py
+        ├── trainer.py              ← Module 1 + habit log + progress photos
+        ├── dietician.py            ← Module 2
+        ├── equipment.py            ← Module 3
+        ├── habit.py                ← Module 4 (frontend routes to /trainer/*)
+        ├── buddy.py                ← Module 5
+        ├── performance.py          ← Module 6
+        └── recommender.py          ← Module 7
+```
+
+---
+
+## Database Schema (SQLite — 7 tables)
+
+| Table | Purpose |
+|-------|---------|
+| `users` | User profile and preferences |
+| `workout_sessions` | Rep logs from the Trainer page |
+| `habit_logs` | Daily mood, stress, gym attendance |
+| `diet_logs` | BMI, BMR, TDEE, calorie targets |
+| `chat_history` | FitBot messages + VADER sentiment scores |
+| `recommendations` | Generated workout plans (stored as JSON) |
+| `progress_photos` | Cloudinary image URLs for progress tracking |
+
+All modules write to SQLite. The Habit ML model re-trains on every prediction call using the full `habit_logs` history — predictions improve as more data is logged.
+
+---
+
+## How to Run
+
+### Requirements
+- Python 3.10+
+- Node.js 18+
+- Git
+
+### Backend
+
+```bash
+# 1. Navigate to backend
+cd backend
+
+# 2. Create and activate virtual environment
+python -m venv venv
+venv\Scripts\activate          # Windows
+# source venv/bin/activate     # Mac / Linux
+
+# 3. Install dependencies
+pip install -r requirements.txt
+
+# 4. Download TextBlob corpora (one time only)
+python -m textblob.download_corpora
+
+# 5. Create .env file with your API keys
+# (see API Keys section below)
+
+# 6. Initialise database (auto-runs on first start)
+python -c "from database import init_db; init_db()"
+
+# 7. Start server
+uvicorn main:app --reload
+# Runs on:       http://localhost:8000
+# Auto API docs: http://localhost:8000/docs
+```
+
+### Frontend
+
+```bash
+cd frontend
+npm install
+npm run dev
+# Runs on: http://localhost:5173
+```
+
+### index.html — Required CDN scripts
+
+These must be in `<head>` of `frontend/index.html` — MediaPipe cannot be imported via npm with Vite:
+
+```html
+<script src="https://cdn.jsdelivr.net/npm/@mediapipe/pose@0.5.1675469404/pose.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils@0.3.1675466862/camera_utils.js"></script>
+```
+
+---
+
+## API Keys Setup
+
+Create `backend/.env` with the following:
+
+```env
+GEMINI_API_KEY=your_gemini_key_here
+CLOUDINARY_CLOUD_NAME=your_cloud_name
+CLOUDINARY_API_KEY=your_api_key
+CLOUDINARY_API_SECRET=your_api_secret
+```
+
+### Getting Keys (all free)
+
+**Gemini API Key:**
+1. Go to [aistudio.google.com](https://aistudio.google.com)
+2. Sign in → Get API Key → Copy
+
+**Cloudinary (progress photo storage):**
+1. Go to [cloudinary.com](https://cloudinary.com) → Free account
+2. Dashboard → copy Cloud Name, API Key, API Secret
+
+---
+
+## API Endpoints
+
+| Method | Endpoint | Module | Description |
+|--------|----------|--------|-------------|
+| GET | `/` | — | Health check |
+| GET | `/dashboard` | All | Aggregated live stats from all modules |
+| POST | `/trainer/log-rep` | 1 | Log reps from Trainer camera |
+| GET | `/trainer/history` | 1 | Recent workout sessions |
+| GET | `/trainer/workout-stats` | 1 | Total reps, favourite exercise |
+| GET | `/trainer/streak` | 4 | Streak + habit history |
+| GET | `/trainer/habit-stats` | 4 | Attendance rate, best day/hour |
+| POST | `/trainer/log` | 4 | Log daily attendance |
+| POST | `/trainer/predict` | 4 | ML skip prediction |
+| POST | `/trainer/save-progress-photo` | 1 | Save Cloudinary URL to DB |
+| GET | `/trainer/progress-photos/{username}` | 1 | Fetch photo gallery |
+| POST | `/dietician/recommend` | 2 | Generate diet plan via RAG + Gemini |
+| POST | `/dietician/chat` | 2 | Follow-up diet questions |
+| GET | `/equipment/recommend` | 3 | Smart equipment recommendation |
+| POST | `/buddy/chat` | 5 | Chat with FitBot |
+| POST | `/performance/analyze` | 6 | Biomechanical motion efficiency scoring |
+| POST | `/recommender/plan` | 7 | Generate weekly workout plan |
+| GET | `/recommender/workout-tips` | 7 | Goal-specific training tips |
+
+Full interactive docs available at `http://localhost:8000/docs`
+
+---
+
+## Module Details
+
+### Module 1 — AI Gym Trainer
+- MediaPipe Pose loaded via CDN — avoids Vite bundling issues (`window.Pose`)
+- 33 body landmarks detected in real time via webcam
+- Joint angles calculated using arctangent formula
+- **Exercises:** Left Curl, Right Curl, Squats
+- **Posture Check** — 4 real-time checks: shoulder level, head position, spine alignment, head drop — scored out of 100
+- Reps logged to `workout_sessions` table every 5 completions
+- Progress photos uploaded to Cloudinary, URL stored in `progress_photos` table
+
+### Module 2 — AI Dietician (RAG)
+- 15 nutrition documents seeded into ChromaDB on first run
+- User query retrieves top 4 relevant docs via vector similarity
+- Retrieved context + BMI/BMR/TDEE profile injected into Gemini prompt
+- Calculates: Harris-Benedict BMR, TDEE with activity multiplier, goal-adjusted calorie target
+- Returns: macro split, full meal plan, grocery list, 3 personalised tips
+- Follow-up chat with quick-question chips
+- Saves each session to `diet_logs` — personalises repeat visits
+
+### Module 3 — Smart Gym Assistant
+- Reads user's entire workout history from SQLite
+- Maps top exercises detected to complementary physical gym equipment
+- Automatically deduplicates and cleans equipment lists for structured API responses
+
+### Module 4 — Habit Tracker
+- Logs: mood (1-5), stress (1-5), planned hour, came/skipped
+- Trains **RandomForestClassifier (150 trees)** on full `habit_logs` history
+- Falls back to rule-based prediction when fewer than 5 entries exist
+- Returns: skip probability, personalised nudge, feature importance breakdown
+- Personalised insight: tracks high-stress attendance rate from DB history
+- History visualised as bar chart in Dashboard
+
+### Module 5 — Virtual Gym Buddy (FitBot)
+- **VADER** detects compound sentiment score (-1 to +1)
+- **TextBlob** measures subjectivity (0 to 1)
+- Detects 7 struggle types: fatigue, stress, skipping risk, injury, low mood, plateau, academic pressure
+- RAG retrieves 3 motivational quotes relevant to message content
+- Gemini system prompt changes completely based on detected emotion
+- Reads past chat history from `chat_history` table — remembers frequent struggles
+- Conversation history maintained per session (last 10 exchanges)
+- Name screen on entry — personalised responses using user's name
+
+### Module 6 — Pose-to-Performance Analyzer
+- Integrates with MediaPipe form accuracy scores and Rep duration metrics
+- Computes non-linear performance efficiency scores out of 100 using NumPy (`np.power`)
+- Analyzes Time Under Tension (TUT) and consistency variance for advanced technical insights
+- Triggers strict form penalties and dynamic feedback logic
+
+### Module 7 — Gym Recommender
+- 22 workout templates across 5 goals and 3 difficulty levels
+- User preference encoded as feature vector (level, equipment, target duration, calories)
+- **Cosine similarity** ranks all matching workouts — same technique as Netflix/Spotify
+- Builds 7-day weekly plan with appropriate rest days
+- Weekly split templates: PPL for muscle gain, HIIT/Cardio alternating for weight loss, etc.
+- 3 goal-specific tips + 1 level-specific tip returned alongside plan
+- Plan count tracked in `recommendations` table
+
+### Interactive Dashboard
+- Live stats from all 5 modules in one view
+- Animated counters (count up from 0 on load)
+- SVG performance rings — attendance %, mood score, reps progress
+- Habit bar chart — last 14 days (purple = attended, grey = skipped, height = mood)
+- VADER sentiment bar — visualises average compound score
+- Module activity feed — highlights from each active module
+- Quick navigation links to all 5 modules
+- Auto-refreshes every 30 seconds
+
+---
+
+## How the Database Improves the App
+
+| Module | How stored data feeds back |
+|--------|---------------------------|
+| Habit Tracker | ML trains on ALL `habit_logs` entries — accuracy improves over time |
+| Gym Buddy | Reads most frequent struggle from `chat_history` — FitBot remembers patterns |
+| Dietician | Detects repeat sessions from `diet_logs` — builds on previous plans |
+| Recommender | Tracks plan count from `recommendations` — shows how many times generated |
+| Dashboard | Aggregates all 5 tables into live stats |
+
+---
+## Known Limitations
+
+- MediaPipe requires good lighting and full body/arm visibility
+- Habit ML needs 5+ logged entries to activate (rule-based until then)
+- Gemini free tier: 15 requests/minute limit
+- SQLite suitable for demo — not for concurrent production use
+# AI Gym & Fitness Assistant
+
+> Full-stack AI fitness ecosystem — React + FastAPI  
+> Sem 2 CSE Final Project — Unlox Academy — April 2026
+
+---
+
+## What This Project Does
+
+An all-in-one AI fitness platform combining computer vision, machine learning, NLP, and RAG into a unified app. Acts as a smart personal trainer, dietician, motivational companion, and data-driven fitness manager.
+
+---
+
+## Modules
+
+| # | Module | Tech |
+|---|--------|------|
+| 1 | AI Gym Trainer | MediaPipe pose detection — squats, curls, posture check |
+| 2 | AI Dietician | RAG + ChromaDB + Gemini — personalised diet plans |
+| 3 | Smart Gym Assistant | Fast API — automated workout data to equipment mapping |
+| 4 | Habit Tracker | SQLite + RandomForest ML — skip prediction |
+| 5 | Virtual Gym Buddy | VADER + TextBlob + RAG + Gemini — motivational chat |
+| 6 | Performance Analyzer | NumPy + FastAPI — biomechanics and TUT calculations |
+| 7 | Gym Recommender | Pandas + cosine similarity — weekly workout plans |
+| — | Dashboard | Live stats from all 7 modules — animated, auto-refresh |
+
+---
+
+## Tech Stack
+
+| Layer | Technology | Version |
+|-------|-----------|---------|
+| Frontend | React 18 + Vite | 18.x |
+| Backend | FastAPI + Python | 0.135.3 |
+| Database | SQLite + SQLAlchemy | 2.0.49 |
+| Vector DB | ChromaDB (RAG) | 1.5.7 |
+| LLM | Google Gemini 2.0 Flash | google-genai 1.72.0 |
+| Pose Detection | MediaPipe (CDN) | 0.10.33 |
+| ML | scikit-learn RandomForest | 1.8.0 |
+| NLP | VADER + TextBlob | 3.3.2 / 0.20.0 |
+| Cloud Storage | Cloudinary | 1.44.1 |
+
+---
+
+## Prerequisites
+
+| Tool | Version | Download |
+|------|---------|----------|
+| Python | 3.10+ | https://www.python.org/downloads/ |
+| Node.js | 18+ | https://nodejs.org/ |
+
+---
+
+## Setup — Two Terminals Required
+
+---
+
+### Terminal 1 — Backend
+
+```powershell
+# 1. Navigate to backend
+cd ai_gym_backend
+
+# 2. Create virtual environment
+python -m venv venv
+
+# 3. Activate — you must see (venv) in prompt before continuing
+venv\Scripts\activate
+
+# 4. Install ChromaDB first (pre-built binary — no C++ compiler needed)
+pip install chromadb --prefer-binary
+
+# 5. Install all other dependencies
+pip install -r requirements.txt
+
+# 6. Download TextBlob language data (one time only)
+python -m textblob.download_corpora
+
+# 7. Create .env file (see API Keys section below)
+
+# 8. Initialise database
+python -c "from database import init_db; init_db()"
+
+# 9. Start backend
+uvicorn main:app --reload
+```
+
+Backend runs on: `http://localhost:8000`  
+API docs at: `http://localhost:8000/docs`
+
+---
+
+### Terminal 2 — Frontend
+
+```powershell
+# 1. Navigate to frontend
+cd frontend
+
+# 2. Install dependencies
+npm install
+
+# 3. Start frontend
+npm run dev
+```
+
+Frontend runs on: `http://localhost:5173`
+
+---
+
+## API Keys (Both Free)
+
+Create file `ai_gym_backend/.env`:
+
+```env
+GEMINI_API_KEY=your_key_here
+CLOUDINARY_CLOUD_NAME=your_cloud_name
+CLOUDINARY_API_KEY=your_api_key
+CLOUDINARY_API_SECRET=your_api_secret
+```
+
+**Gemini (free):** https://aistudio.google.com → Get API Key  
+**Cloudinary (free — 25GB):** https://cloudinary.com → Dashboard → copy credentials
+
+---
+
+## Error Checking Commands
+
+Run all of these from inside `ai_gym_backend/` with `(venv)` active.
+
+---
+
+### 1. Verify all packages installed
+```powershell
+python -c "
+import fastapi, uvicorn, sqlalchemy, chromadb
+import sklearn, numpy, pandas
+import vaderSentiment, textblob
+import cloudinary, dotenv
+print('All packages OK')
+print('FastAPI:', fastapi.__version__)
+print('SQLAlchemy:', sqlalchemy.__version__)
+print('ChromaDB:', chromadb.__version__)
+print('scikit-learn:', sklearn.__version__)
+"
+```
+Expected: `All packages OK` followed by version numbers.
+
+---
+
+### 2. Verify all 7 database tables exist
+```powershell
+python -c "
+import sqlite3
+conn = sqlite3.connect('data/gym_assistant.db')
+tables = [t[0] for t in conn.execute(\"SELECT name FROM sqlite_master WHERE type='table'\").fetchall()]
+expected = ['users','workout_sessions','habit_logs','diet_logs','chat_history','recommendations','progress_photos']
+for t in expected:
+    status = 'OK' if t in tables else 'MISSING'
+    print(f'{status}  {t}')
+conn.close()
+"
+```
+Expected: All lines show `OK`.
+
+---
+
+### 3. Verify all database models import
+```powershell
+python -c "
+from database import (
+    User, WorkoutSession, HabitLog,
+    DietLog, ChatHistory, Recommendation, ProgressPhoto,
+    init_db, get_db
+)
+print('All 7 database models imported OK')
+"
+```
+Expected: `All 7 database models imported OK`
+
+---
+
+### 4. Verify Gemini API key works
+```powershell
+python -c "
+import os
+from dotenv import load_dotenv
+load_dotenv()
+from google import genai
+client = genai.Client(api_key=os.getenv('GEMINI_API_KEY'))
+response = client.models.generate_content(
+    model='gemini-2.0-flash', contents='Reply with just the word: working'
+)
+print('Gemini API response:', response.text.strip())
+"
+```
+Expected: `Gemini API response: working`
+
+---
+
+### 5. Verify ChromaDB vector store works
+```powershell
+python -c "
+import chromadb
+client = chromadb.PersistentClient(path='./chroma_db')
+col = client.get_or_create_collection('verify_test')
+col.add(documents=['fitness test document'], ids=['verify_1'])
+result = col.query(query_texts=['fitness'], n_results=1)
+print('ChromaDB OK — retrieved:', result['documents'][0][0])
+"
+```
+Expected: `ChromaDB OK — retrieved: fitness test document`
+
+---
+
+### 6. Verify backend health (server must be running)
+```powershell
+curl http://localhost:8000/
+```
+Expected:
+```json
+{"status":"running","version":"2.0.0","modules":["trainer","dietician","habit","buddy","recommender"]}
+```
+
+---
+
+### 7. Verify all key endpoints respond (server must be running)
+```powershell
+python -c "
+import urllib.request
+
+base = 'http://localhost:8000'
+endpoints = [
+    '/',
+    '/dashboard',
+    '/trainer/streak',
+    '/trainer/workout-stats',
+    '/trainer/habit-stats',
+    '/recommender/workout-tips?goal=muscle_gain&level=beginner',
+]
+
+print('Checking endpoints...')
+for ep in endpoints:
+    try:
+        res = urllib.request.urlopen(base + ep, timeout=5)
+        print(f'  200 OK    {ep}')
+    except Exception as e:
+        print(f'  FAILED    {ep}  =>  {e}')
+"
+```
+Expected: All lines show `200 OK`
+
+---
+
+### 8. Verify database has data (after using the app)
+```powershell
+python -c "
+import sqlite3
+conn = sqlite3.connect('data/gym_assistant.db')
+tables = ['workout_sessions','habit_logs','diet_logs',
+          'chat_history','recommendations','progress_photos']
+print('Database row counts:')
+for t in tables:
+    count = conn.execute(f'SELECT COUNT(*) FROM {t}').fetchone()[0]
+    print(f'  {t:<25} {count:>3} rows')
+conn.close()
+"
+```
+
+---
+
+### 9. Full pre-flight check (run this before every demo)
+```powershell
+python -c "
+import os, sqlite3
+from dotenv import load_dotenv
+load_dotenv()
+
+print('=== AI Gym Assistant Pre-flight Check ===')
+
+# Packages
+try:
+    import fastapi, sqlalchemy, chromadb, sklearn, vaderSentiment, textblob
+    print('PASS  All packages installed')
+except ImportError as e:
+    print(f'FAIL  Missing package: {e}')
+
+# API Key
+key = os.getenv('GEMINI_API_KEY')
+if key and key != 'your_key_here':
+    print('PASS  GEMINI_API_KEY found')
+else:
+    print('FAIL  GEMINI_API_KEY missing or not set in .env')
+
+# Database
+try:
+    conn = sqlite3.connect('data/gym_assistant.db')
+    tables = [t[0] for t in conn.execute(\"SELECT name FROM sqlite_master WHERE type='table'\").fetchall()]
+    expected = ['workout_sessions','habit_logs','diet_logs','chat_history','recommendations','progress_photos']
+    missing = [t for t in expected if t not in tables]
+    if not missing:
+        print('PASS  All 7 database tables exist')
+    else:
+        print(f'FAIL  Missing tables: {missing}')
+    conn.close()
+except Exception as e:
+    print(f'FAIL  Database error: {e}')
+
+# ChromaDB
+try:
+    import chromadb as cb
+    client = cb.PersistentClient(path='./chroma_db')
+    cols = [c.name for c in client.list_collections()]
+    print(f'PASS  ChromaDB ready — collections: {cols}')
+except Exception as e:
+    print(f'FAIL  ChromaDB error: {e}')
+
+print('=== Check complete ===')
+"
+```
+Expected: All lines show `PASS`
+
+---
+
+## Common Errors and Fixes
+
+| Error | Cause | Fix |
+|-------|-------|-----|
+| `No module named 'sqlalchemy'` | venv not activated | Run `venv\Scripts\activate` |
+| `chromadb build failed` | No C++ compiler | Run `pip install chromadb --prefer-binary` |
+| `API_KEY_INVALID` | Wrong Gemini key | Get fresh key from aistudio.google.com |
+| `uvicorn not recognized` | venv not active | Run `venv\Scripts\activate` |
+| Camera not working | Browser blocked | Allow camera for localhost:5173 in browser settings |
+| MediaPipe slow (15s) | First-time model download | Wait — downloads once and caches |
+| `favicon.ico 404` | Browser auto-request | Harmless — ignore completely |
+| `CORS error` | Backend endpoint crashing | Check backend terminal for real error |
+| Port 8000 in use | Another process | Run `netstat -ano \| findstr :8000` then kill PID |
+| Port 5173 in use | Another Vite running | Run `npx kill-port 5173` |
+
+---
+
+## Project Structure
+
+```
+ai_gym_assistant/
+├── frontend/
+│   ├── index.html              ← MediaPipe CDN scripts in <head>
+│   ├── src/
+│   │   ├── App.jsx             ← Router + navigation
+│   │   └── pages/
+│   │       ├── Dashboard.jsx
+│   │       ├── Trainer.jsx
+│   │       ├── Dietician.jsx
+│   │       ├── Habit.jsx
+│   │       ├── Buddy.jsx
+│   │       └── Recommender.jsx
+│   └── package.json
+│
+└── ai_gym_backend/
+    ├── main.py                 ← FastAPI entry + /dashboard
+    ├── database.py             ← SQLAlchemy — 7 tables
+    ├── .env                    ← API keys (not committed)
+    ├── requirements.txt
+    ├── data/
+    │   ├── gym_assistant.db    ← SQLite (auto-created)
+    │   └── workout_log.csv     ← Habit CSV backup
+    ├── chroma_db/              ← Vector store (auto-created)
+    └── modules/
+        ├── trainer.py          ← Modules 1 + 4
+        ├── dietician.py        ← Module 2
+        ├── equipment.py        ← Module 3
+        ├── buddy.py            ← Module 5
+        ├── performance.py      ← Module 6
+        └── recommender.py      ← Module 7
+```
+
+---

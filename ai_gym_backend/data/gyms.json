@@ -1,0 +1,34 @@
+[
+  {
+    "name": "Cult Fit Gym",
+    "city": "Hyderabad",
+    "area": "Madhapur",
+    "rating": 4.6,
+    "price": 2500,
+    "type": "premium"
+  },
+  {
+    "name": "Gold's Gym",
+    "city": "Hyderabad",
+    "area": "Kukatpally",
+    "rating": 4.5,
+    "price": 3000,
+    "type": "premium"
+  },
+  {
+    "name": "Local Fitness Hub",
+    "city": "Hyderabad",
+    "area": "Ameerpet",
+    "rating": 4.0,
+    "price": 1200,
+    "type": "budget"
+  },
+  {
+    "name": "StreetFit Gym",
+    "city": "Hyderabad",
+    "area": "SR Nagar",
+    "rating": 3.8,
+    "price": 800,
+    "type": "budget"
+  }
+]
