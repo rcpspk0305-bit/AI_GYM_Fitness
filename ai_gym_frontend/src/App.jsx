@@ -1,4 +1,4 @@
-import { BrowserRouter, Routes, Route, Link, Navigate, useLocation } from "react-router-dom";
+import { BrowserRouter, Routes, Route, NavLink, Navigate } from "react-router-dom";
 import Trainer from "./pages/Trainer";
 import Dietician from "./pages/Dietician";
 import Habit from "./pages/Habit";
@@ -7,77 +7,45 @@ import Recommender from "./pages/Recommender";
 import Dashboard from "./pages/Dashboard";
 import "./App.css";
 
-function Navbar() {
-  const location = useLocation();
+const navItems = [
+  { to: "/dashboard", label: "Dashboard", icon: "📊" },
+  { to: "/trainer", label: "Trainer", icon: "💪" },
+  { to: "/dietician", label: "Dietician", icon: "🥗" },
+  { to: "/habit", label: "Habits", icon: "🔥" },
+  { to: "/buddy", label: "Buddy", icon: "🤖" },
+  { to: "/recommender", label: "Recommender", icon: "📋" },
+];
 
-  const navItems = [
-    { to: "/dashboard", label: "Dashboard" },
-    { to: "/trainer", label: "Trainer" },
-    { to: "/dietician", label: "Dietician" },
-    { to: "/habit", label: "Habits" },
-    { to: "/buddy", label: "Buddy" },
-    { to: "/recommender", label: "Recommender" },
-  ];
-
+function AppShell() {
   return (
-    <nav
-      style={{
-        display: "flex",
-        gap: "12px",
-        padding: "16px 20px",
-        borderBottom: "1px solid var(--color-border-secondary)",
-        flexWrap: "wrap",
-        alignItems: "center",
-        position: "sticky",
-        top: 0,
-        zIndex: 100,
-        background: "rgba(15, 23, 42, 0.92)",
-        backdropFilter: "blur(10px)",
-      }}
-    >
-      <div
-        style={{
-          fontWeight: 700,
-          marginRight: 12,
-          color: "var(--color-text-primary)",
-          fontSize: "18px",
-        }}
-      >
-        💪 AI Gym
-      </div>
+    <div className="app-shell">
+      <div className="app-bg-glow glow-one" />
+      <div className="app-bg-glow glow-two" />
 
-      {navItems.map(({ to, label }) => {
-        const active = location.pathname === to;
+      <header className="topbar">
+        <div className="brand-block">
+          <div className="brand-badge">💪</div>
+          <div>
+            <h1 className="brand-title">AI Gym Assistant</h1>
+            <p className="brand-subtitle">Smart fitness dashboard with coaching, tracking, and insights</p>
+          </div>
+        </div>
 
-        return (
-          <Link
-            key={to}
-            to={to}
-            style={{
-              color: active ? "#ffffff" : "var(--color-text-secondary)",
-              textDecoration: "none",
-              padding: "8px 12px",
-              borderRadius: "8px",
-              border: `1px solid ${active ? "#7c3aed" : "var(--color-border-tertiary)"}`,
-              background: active ? "rgba(124, 58, 237, 0.18)" : "transparent",
-              transition: "all 0.2s ease",
-              fontWeight: active ? 600 : 500,
-            }}
-          >
-            {label}
-          </Link>
-        );
-      })}
-    </nav>
-  );
-}
+        <nav className="nav-links">
+          {navItems.map(({ to, label, icon }) => (
+            <NavLink
+              key={to}
+              to={to}
+              className={({ isActive }) => `nav-link ${isActive ? "active" : ""}`}
+            >
+              <span className="nav-icon">{icon}</span>
+              <span>{label}</span>
+            </NavLink>
+          ))}
+        </nav>
+      </header>
 
-export default function App() {
-  return (
-    <BrowserRouter>
-      <div style={{ minHeight: "100vh", background: "var(--color-background-primary)" }}>
-        <Navbar />
-
+      <main className="page-shell">
         <Routes>
           <Route path="/" element={<Navigate to="/dashboard" replace />} />
           <Route path="/dashboard" element={<Dashboard />} />
@@ -87,7 +55,15 @@ export default function App() {
           <Route path="/buddy" element={<Buddy />} />
           <Route path="/recommender" element={<Recommender />} />
         </Routes>
-      </div>
+      </main>
+    </div>
+  );
+}
+
+export default function App() {
+  return (
+    <BrowserRouter>
+      <AppShell />
     </BrowserRouter>
   );
 }

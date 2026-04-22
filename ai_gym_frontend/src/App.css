@@ -1,12 +1,24 @@
 :root {
   --color-background-primary: #0f172a;
   --color-background-secondary: #1e293b;
+  --color-background-tertiary: #172033;
+  --color-surface-glass: rgba(30, 41, 59, 0.72);
+
   --color-border-secondary: #334155;
   --color-border-tertiary: #475569;
 
   --color-text-primary: #f8fafc;
   --color-text-secondary: #94a3b8;
   --color-text-tertiary: #64748b;
+
+  --color-accent-purple: #8b5cf6;
+  --color-accent-blue: #0284c7;
+  --color-accent-green: #16a34a;
+  --color-accent-orange: #d97706;
+  --color-accent-red: #ef4444;
+
+  --shadow-soft: 0 10px 30px rgba(0, 0, 0, 0.22);
+  --shadow-strong: 0 18px 45px rgba(0, 0, 0, 0.28);
 }
 
 * {
@@ -18,145 +30,237 @@ body,
 #root {
   min-height: 100%;
   margin: 0;
-  padding: 0;
 }
 
 body {
-  background-color: var(--color-background-primary);
+  background:
+    radial-gradient(circle at top right, rgba(124, 58, 237, 0.14), transparent 24%),
+    radial-gradient(circle at left center, rgba(2, 132, 199, 0.12), transparent 26%),
+    linear-gradient(180deg, #0b1120 0%, var(--color-background-primary) 100%);
   color: var(--color-text-primary);
-  margin: 0;
-  font-family: Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  overflow-x: hidden;
 }
 
 a {
   color: inherit;
+  text-decoration: none;
 }
 
-button,
-input {
-  font: inherit;
+.app-shell {
+  min-height: 100vh;
+  position: relative;
+  padding: 24px 18px 32px;
 }
 
-.dashboard-wrap {
-  width: 100%;
+.app-bg-glow {
+  position: fixed;
+  border-radius: 50%;
+  filter: blur(24px);
+  pointer-events: none;
+  z-index: 0;
+  opacity: 0.85;
 }
 
-.dashboard-grid-3,
-.dashboard-grid-4,
-.dashboard-grid-2 {
-  display: grid;
-  gap: 14px;
+.glow-one {
+  width: 280px;
+  height: 280px;
+  top: -60px;
+  right: -40px;
+  background: radial-gradient(circle, rgba(124, 58, 237, 0.24), transparent 68%);
+  animation: floatGlow 8s ease-in-out infinite;
 }
 
-.dashboard-grid-3 {
-  grid-template-columns: repeat(3, 1fr);
+.glow-two {
+  width: 250px;
+  height: 250px;
+  left: -70px;
+  top: 220px;
+  background: radial-gradient(circle, rgba(2, 132, 199, 0.20), transparent 72%);
+  animation: floatGlow 10s ease-in-out infinite;
 }
 
-.dashboard-grid-4 {
-  grid-template-columns: repeat(4, 1fr);
-}
-
-.dashboard-grid-2 {
-  grid-template-columns: repeat(2, 1fr);
-}
-
-.dashboard-flex-row {
+.topbar {
+  position: sticky;
+  top: 14px;
+  z-index: 20;
+  max-width: 1180px;
+  margin: 0 auto 22px;
+  padding: 18px 20px;
+  border-radius: 22px;
+  border: 1px solid rgba(71, 85, 105, 0.65);
+  background: rgba(15, 23, 42, 0.72);
+  -webkit-backdrop-filter: blur(14px);
+  backdrop-filter: blur(14px);
+  box-shadow: var(--shadow-soft);
   display: flex;
-  gap: 16px;
-  flex-wrap: wrap;
+  flex-direction: column;
+  gap: 18px;
 }
 
-.iot-grid {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 14px;
-}
-
-.card-hover {
-  transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease;
-}
-
-.card-hover:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.18);
-}
-
-.quick-link {
+.brand-block {
   display: flex;
   align-items: center;
+  gap: 14px;
+}
+
+.brand-badge {
+  width: 52px;
+  height: 52px;
+  border-radius: 16px;
+  display: grid;
+  place-items: center;
+  font-size: 24px;
+  background: linear-gradient(135deg, rgba(124, 58, 237, 0.20), rgba(2, 132, 199, 0.18));
+  border: 1px solid rgba(124, 58, 237, 0.26);
+  box-shadow: 0 10px 24px rgba(124, 58, 237, 0.18);
+}
+
+.brand-title {
+  margin: 0;
+  font-size: 1.35rem;
+  line-height: 1.1;
+  letter-spacing: -0.02em;
+}
+
+.brand-subtitle {
+  margin: 4px 0 0;
+  font-size: 0.92rem;
+  color: var(--color-text-secondary);
+}
+
+.nav-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.nav-link {
+  display: inline-flex;
+  align-items: center;
   gap: 8px;
-  padding: 10px 18px;
-  border-radius: 10px;
-  text-decoration: none;
-  font-weight: 500;
-  font-size: 14px;
-  transition: transform 0.15s ease, opacity 0.15s ease;
-}
-
-.quick-link:hover {
-  transform: translateY(-1px);
-  opacity: 0.92;
-}
-
-.iot-pill {
-  font-size: 11px;
-  padding: 4px 10px;
-  border-radius: 999px;
+  padding: 10px 14px;
+  border-radius: 14px;
+  background: rgba(30, 41, 59, 0.68);
+  border: 1px solid rgba(71, 85, 105, 0.55);
+  color: var(--color-text-secondary);
+  font-size: 0.94rem;
   font-weight: 600;
+  transition:
+    transform 0.22s ease,
+    background 0.22s ease,
+    color 0.22s ease,
+    border-color 0.22s ease,
+    box-shadow 0.22s ease;
 }
 
-.iot-pill.connected {
-  background: #ecfdf5;
-  color: #047857;
-}
-
-.iot-pill.disconnected {
-  background: #fef2f2;
-  color: #b91c1c;
-}
-
-.iot-pill.topic {
-  background: #f3f4f6;
-  color: #4b5563;
-}
-
-.device-card {
-  transition: transform 0.18s ease, border-color 0.18s ease, box-shadow 0.18s ease;
-}
-
-.device-card:hover {
+.nav-link:hover {
   transform: translateY(-2px);
-  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.18);
+  color: var(--color-text-primary);
+  background: rgba(51, 65, 85, 0.82);
+  border-color: rgba(124, 58, 237, 0.28);
+  box-shadow: 0 10px 22px rgba(0, 0, 0, 0.16);
 }
 
-@media (max-width: 1024px) {
-  .dashboard-grid-4 {
-    grid-template-columns: repeat(2, 1fr);
+.nav-link.active {
+  color: white;
+  background: linear-gradient(135deg, rgba(124, 58, 237, 0.22), rgba(2, 132, 199, 0.20));
+  border-color: rgba(124, 58, 237, 0.40);
+  box-shadow: 0 12px 26px rgba(124, 58, 237, 0.16);
+}
+
+.nav-icon {
+  font-size: 1rem;
+}
+
+.page-shell {
+  position: relative;
+  z-index: 1;
+  max-width: 1180px;
+  margin: 0 auto;
+}
+
+.page-shell>* {
+  animation: pageFade 0.55s ease;
+}
+
+@keyframes floatGlow {
+  0% {
+    transform: translateY(0) translateX(0) scale(1);
   }
 
-  .iot-grid,
-  .dashboard-grid-2 {
-    grid-template-columns: 1fr;
+  50% {
+    transform: translateY(-14px) translateX(10px) scale(1.05);
+  }
+
+  100% {
+    transform: translateY(0) translateX(0) scale(1);
   }
 }
 
-@media (max-width: 768px) {
-
-  .dashboard-grid-3,
-  .dashboard-grid-4,
-  .dashboard-grid-2,
-  .iot-grid {
-    grid-template-columns: 1fr;
+@keyframes pageFade {
+  from {
+    opacity: 0;
+    transform: translateY(16px);
   }
 
-  body {
-    font-size: 14px;
+  to {
+    opacity: 1;
+    transform: translateY(0);
   }
 }
 
-@media (max-width: 480px) {
-  .quick-link {
-    width: 100%;
+@media (max-width: 900px) {
+  .topbar {
+    padding: 16px;
+    border-radius: 18px;
+  }
+
+  .brand-title {
+    font-size: 1.16rem;
+  }
+
+  .brand-subtitle {
+    font-size: 0.85rem;
+  }
+
+  .nav-links {
+    gap: 8px;
+  }
+
+  .nav-link {
+    padding: 9px 12px;
+    font-size: 0.88rem;
+  }
+}
+
+@media (max-width: 640px) {
+  .app-shell {
+    padding: 16px 12px 28px;
+  }
+
+  .topbar {
+    top: 10px;
+    margin-bottom: 18px;
+  }
+
+  .brand-block {
+    align-items: flex-start;
+  }
+
+  .brand-badge {
+    width: 46px;
+    height: 46px;
+    border-radius: 14px;
+    font-size: 22px;
+  }
+
+  .nav-links {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .nav-link {
     justify-content: center;
   }
 }
