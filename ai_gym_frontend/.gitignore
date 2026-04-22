@@ -45,3 +45,5 @@ Thumbs.db
 
 # Optional local uploads/output
 output/
+RENDER_DEPLOY_GUIDE.md
+render.yaml

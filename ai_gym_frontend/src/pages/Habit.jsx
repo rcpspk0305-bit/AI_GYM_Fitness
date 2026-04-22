@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import axios from "axios";
 
-const API = "http://localhost:8000/habit";
+const API = `${import.meta.env.VITE_API_BASE_URL || "http://localhost:8000"}/trainer`;
 const DAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 
 // ─── UI helpers ────────────────────────────────────────────────────────────────
@@ -135,6 +135,7 @@ export default function Habit() {
   const [history, setHistory] = useState([]);
   const [insights, setInsights] = useState(null);
 
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => { fetchStats(); }, []);
 
   // Build insights locally from streak + stats — no separate API call needed

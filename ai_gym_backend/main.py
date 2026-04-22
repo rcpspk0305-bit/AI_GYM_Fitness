@@ -3,12 +3,13 @@ load_dotenv()
 
 from fastapi import FastAPI, Depends, Response
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.middleware.gzip import GZipMiddleware
 from sqlalchemy.orm import Session
 
 from database import (
     init_db, get_db,
     WorkoutSession, HabitLog,
-    DietLog, ChatHistory, Recommendation, ProgressPhoto
+    DietLog, ChatHistory, Recommendation, ProgressPhoto, IoTTelemetry
 )
 
 from modules import trainer, dietician, buddy, recommender, equipment, performance, iot
@@ -22,10 +23,12 @@ app = FastAPI(
     version="3.0.0",
 )
 
+app.add_middleware(GZipMiddleware, minimum_size=500)
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
-        "http://localhost:5173"
+        "http://localhost:5173",
         "https://ai-gym-fitness.onrender.com"
     ],
     allow_methods=["*"],
@@ -108,6 +111,9 @@ def get_dashboard(db: Session = Depends(get_db)):
     recommendations = db.query(Recommendation).all()
     photos = db.query(ProgressPhoto).all()
 
+    telemetry = db.query(IoTTelemetry).order_by(IoTTelemetry.created_at.desc()).limit(20).all()
+    heart_rate_history = [t.heart_rate for t in reversed(telemetry) if t.heart_rate]
+
     return {
         "workout": {
             "total_reps": total_reps,
@@ -137,5 +143,8 @@ def get_dashboard(db: Session = Depends(get_db)):
         },
         "storage": {
             "progress_photos": len(photos),
+        },
+        "telemetry": {
+            "heart_rate_history": heart_rate_history,
         },
     }

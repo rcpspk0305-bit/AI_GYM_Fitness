@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from "react";
 import axios from "axios";
 
-const API = "http://localhost:8000/buddy/chat";
+const API = `${import.meta.env.VITE_API_BASE_URL || "http://localhost:8000"}/buddy/chat`;
 
 const QUICK_PROMPTS = [
   "I'm feeling really tired today",
@@ -95,7 +95,6 @@ export default function Buddy() {
   const [nameInput, setNameInput] = useState("");
   const bottomRef  = useRef(null);
   const inputRef   = useRef(null);
-  const historyRef = useRef([]);
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });

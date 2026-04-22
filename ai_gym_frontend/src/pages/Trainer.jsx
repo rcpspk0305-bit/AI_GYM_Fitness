@@ -1,7 +1,7 @@
 import { useRef, useState, useCallback } from "react";
 import axios from "axios";
 
-const API      = "http://localhost:8000/trainer";
+const API      = `${import.meta.env.VITE_API_BASE_URL || "http://localhost:8000"}/trainer`;
 const USERNAME = "Cherry";
 const CLOUDINARY_CLOUD_NAME = "dpefgyvua";
 const CLOUDINARY_UPLOAD_PRESET = "ai_gym_uploads";
