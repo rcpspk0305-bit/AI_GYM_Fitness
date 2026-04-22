@@ -6,7 +6,7 @@
 __pycache__/
 *.py[cod]
 
-# Virtual envs
+# Virtual envsc
 venv/
 .venv/
 env/

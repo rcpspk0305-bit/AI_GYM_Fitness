@@ -24,7 +24,10 @@ app = FastAPI(
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173"],
+    allow_origins=[
+        "http://localhost:5173"
+        "https://ai-gym-fitness.onrender.com"
+    ],
     allow_methods=["*"],
     allow_headers=["*"],
 )

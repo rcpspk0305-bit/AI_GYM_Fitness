@@ -3,13 +3,18 @@ from datetime import datetime
 from sqlalchemy import create_engine, Column, Integer, Float, String, Boolean, DateTime, Text
 from sqlalchemy.orm import declarative_base, sessionmaker, Session
 
+BASE_STORAGE = os.getenv("APP_STORAGE", "/opt/render/project/src/storage")
 os.makedirs("data", exist_ok=True)
 DATABASE_URL = "sqlite:///data/gym_assistant.db"
+DATABASE_URL = f"sqlite:///{BASE_STORAGE}/gym_assistant.db"
 
 engine = create_engine(DATABASE_URL, connect_args={"check_same_thread": False})
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 Base = declarative_base()
 
+engine = create_engine(DATABASE_URL, connect_args={"check_same_thread": False})
+SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+Base = declarative_base()
 
 class User(Base):
     __tablename__ = "users"
