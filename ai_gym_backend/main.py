@@ -34,6 +34,8 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+#GZip second
+app.add_middleware(GZipMiddleware, minimum_size=500)
 
 app.include_router(trainer.router, prefix="/trainer", tags=["Trainer"])
 app.include_router(dietician.router, prefix="/dietician", tags=["Dietician"])
