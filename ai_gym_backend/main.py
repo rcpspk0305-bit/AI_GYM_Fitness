@@ -12,7 +12,7 @@ from database import (
     DietLog, ChatHistory, Recommendation, ProgressPhoto, IoTTelemetry
 )
 
-from modules import trainer, dietician, buddy, recommender, equipment, performance, iot
+from modules import trainer, dietician, buddy, habit, recommender, equipment, performance, iot
 from modules.mqtt_service import start_mqtt, stop_mqtt
 
 init_db()
@@ -23,23 +23,27 @@ app = FastAPI(
     version="3.0.0",
 )
 
+# GZip is added first so it runs INSIDE the CORS wrapper
 app.add_middleware(GZipMiddleware, minimum_size=500)
 
+# CORS is added last so it is the OUTERMOST layer
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
+        "https://ai-gym-fitness.onrender.com",
+        "https://ai-gym-fitness-vzj3.onrender.com",
         "http://localhost:5173",
-        "https://ai-gym-fitness.onrender.com"
+        "http://localhost:3000"
     ],
+    allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
-#GZip second
-app.add_middleware(GZipMiddleware, minimum_size=500)
 
 app.include_router(trainer.router, prefix="/trainer", tags=["Trainer"])
 app.include_router(dietician.router, prefix="/dietician", tags=["Dietician"])
 app.include_router(buddy.router, prefix="/buddy", tags=["Buddy"])
+app.include_router(habit.router, prefix="/habit", tags=["Habit"])
 app.include_router(recommender.router, prefix="/recommender", tags=["Recommender"])
 app.include_router(equipment.router, prefix="/equipment", tags=["Equipment"])
 app.include_router(performance.router, prefix="/performance", tags=["Performance"])
@@ -56,7 +60,6 @@ def app_shutdown():
     stop_mqtt()
 
 
-# Change @app.get to @app.api_route and add methods=["GET", "HEAD"]
 @app.api_route("/", methods=["GET", "HEAD"], tags=["Health"])
 def root():
     return {
