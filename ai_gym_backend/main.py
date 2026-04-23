@@ -56,7 +56,8 @@ def app_shutdown():
     stop_mqtt()
 
 
-@app.get("/", tags=["Health"])
+# Change @app.get to @app.api_route and add methods=["GET", "HEAD"]
+@app.api_route("/", methods=["GET", "HEAD"], tags=["Health"])
 def root():
     return {
         "status": "running",
@@ -65,7 +66,7 @@ def root():
             "trainer", "dietician", "habit", "buddy",
             "recommender", "equipment", "performance", "iot"
         ],
-        "docs": "http://localhost:8000/docs",
+        "docs": "https://ai-gym-backend.onrender.com/docs",
     }
 
 
