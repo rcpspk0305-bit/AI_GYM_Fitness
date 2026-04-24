@@ -1,7 +1,6 @@
 # AI Gym & Fitness Assistant
 
 > A full-stack AI-powered fitness ecosystem — React frontend + FastAPI backend.
-> Sem 2 CSE Final Project — Unlox Academy — April 2026
 
 ---
 
@@ -38,7 +37,7 @@ The AI Gym & Fitness Assistant is an all-in-one platform that combines computer 
 - **Styling:** Custom Vanilla CSS with Glassmorphism elements
 
 ### Backend
-- **API Framework:** FastAPI (Python 3.12)
+- **API Framework:** FastAPI (Python 3.13)
 - **Server:** Uvicorn with hot reload (Gunicorn for production scaling) + GZipMiddleware for max speed payloads
 - **Database:** SQLite with SQLAlchemy ORM (`data/gym_assistant.db`)
 - **Vector DB:** ChromaDB (RAG for diet + buddy modules)

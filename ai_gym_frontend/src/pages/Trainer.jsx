@@ -1,7 +1,7 @@
 import { useRef, useState, useCallback } from "react";
 import axios from "axios";
 
-const API      = `${import.meta.env.VITE_API_BASE_URL || "http://localhost:8000"}/trainer`;
+const API = `${import.meta.env.VITE_API_BASE_URL || "http://localhost:8000"}/trainer`;
 const USERNAME = "Cherry";
 const CLOUDINARY_CLOUD_NAME = "dpefgyvua";
 const CLOUDINARY_UPLOAD_PRESET = "ai_gym_uploads";
@@ -23,7 +23,7 @@ function drawLine(ctx, p1, p2, color = "#a855f7", width = 3) {
   ctx.moveTo(p1[0], p1[1]);
   ctx.lineTo(p2[0], p2[1]);
   ctx.strokeStyle = color;
-  ctx.lineWidth   = width;
+  ctx.lineWidth = width;
   ctx.stroke();
 }
 
@@ -37,27 +37,27 @@ function drawDot(ctx, p, color = "#22c55e", radius = 8) {
 function drawAngleLabel(ctx, text, p) {
   ctx.fillStyle = "rgba(0,0,0,0.55)";
   ctx.fillRect(p[0] + 10, p[1] - 22, text.length * 10 + 10, 28);
-  ctx.fillStyle  = "#fbbf24";
-  ctx.font       = "bold 16px sans-serif";
+  ctx.fillStyle = "#fbbf24";
+  ctx.font = "bold 16px sans-serif";
   ctx.fillText(text, p[0] + 15, p[1] - 3);
 }
 
 // ─── Exercise analysers ────────────────────────────────────────────────────────
 
 function analyseSquat(lm, W, H, stage) {
-  const lHip   = { x: lm[23].x, y: lm[23].y };
-  const lKnee  = { x: lm[25].x, y: lm[25].y };
+  const lHip = { x: lm[23].x, y: lm[23].y };
+  const lKnee = { x: lm[25].x, y: lm[25].y };
   const lAnkle = { x: lm[27].x, y: lm[27].y };
-  const rHip   = { x: lm[24].x, y: lm[24].y };
-  const rKnee  = { x: lm[26].x, y: lm[26].y };
+  const rHip = { x: lm[24].x, y: lm[24].y };
+  const rKnee = { x: lm[26].x, y: lm[26].y };
   const rAnkle = { x: lm[28].x, y: lm[28].y };
 
-  const leftAngle  = calculateAngle(lHip,  lKnee,  lAnkle);
-  const rightAngle = calculateAngle(rHip,  rKnee,  rAnkle);
-  const angle      = (leftAngle + rightAngle) / 2;
+  const leftAngle = calculateAngle(lHip, lKnee, lAnkle);
+  const rightAngle = calculateAngle(rHip, rKnee, rAnkle);
+  const angle = (leftAngle + rightAngle) / 2;
 
   let newStage = stage;
-  let counted  = false;
+  let counted = false;
   if (angle > 160) newStage = "UP";
   if (angle < 95 && stage === "UP") { newStage = "DOWN"; counted = true; }
 
@@ -66,18 +66,18 @@ function analyseSquat(lm, W, H, stage) {
     Math.abs(lm[26].x * W - lm[28].x * W) > W * 0.08;
 
   const feedback =
-    kneeOver        ? "Knees too far forward — push hips back!" :
-    angle > 160     ? "Standing — squat down slowly" :
-    angle > 120     ? "Going down — keep back straight" :
-    angle < 95      ? "Deep squat! Drive through heels" :
-                      "Parallel depth — perfect!";
+    kneeOver ? "Knees too far forward — push hips back!" :
+      angle > 160 ? "Standing — squat down slowly" :
+        angle > 120 ? "Going down — keep back straight" :
+          angle < 95 ? "Deep squat! Drive through heels" :
+            "Parallel depth — perfect!";
 
   const points = {
-    lHip:   [lm[23].x * W, lm[23].y * H],
-    lKnee:  [lm[25].x * W, lm[25].y * H],
+    lHip: [lm[23].x * W, lm[23].y * H],
+    lKnee: [lm[25].x * W, lm[25].y * H],
     lAnkle: [lm[27].x * W, lm[27].y * H],
-    rHip:   [lm[24].x * W, lm[24].y * H],
-    rKnee:  [lm[26].x * W, lm[26].y * H],
+    rHip: [lm[24].x * W, lm[24].y * H],
+    rKnee: [lm[26].x * W, lm[26].y * H],
     rAnkle: [lm[28].x * W, lm[28].y * H],
   };
 
@@ -86,21 +86,21 @@ function analyseSquat(lm, W, H, stage) {
 
 function analyseCurl(lm, W, H, stage, side) {
   const si = side === "left" ? [11, 13, 15] : [12, 14, 16];
-  const a  = { x: lm[si[0]].x, y: lm[si[0]].y };
-  const b  = { x: lm[si[1]].x, y: lm[si[1]].y };
-  const c  = { x: lm[si[2]].x, y: lm[si[2]].y };
+  const a = { x: lm[si[0]].x, y: lm[si[0]].y };
+  const b = { x: lm[si[1]].x, y: lm[si[1]].y };
+  const c = { x: lm[si[2]].x, y: lm[si[2]].y };
   const angle = calculateAngle(a, b, c);
 
   let newStage = stage;
-  let counted  = false;
+  let counted = false;
   if (angle > 160) newStage = "DOWN";
   if (angle < 35 && stage === "DOWN") { newStage = "UP"; counted = true; }
 
   const feedback =
     angle > 150 ? "Arm extended — curl up!" :
-    angle < 40  ? "Full curl! Lower slowly" :
-    angle > 90  ? "Halfway — keep curling" :
-                  "Good form!";
+      angle < 40 ? "Full curl! Lower slowly" :
+        angle > 90 ? "Halfway — keep curling" :
+          "Good form!";
 
   return {
     angle,
@@ -109,43 +109,39 @@ function analyseCurl(lm, W, H, stage, side) {
     feedback,
     points: {
       shoulder: [lm[si[0]].x * W, lm[si[0]].y * H],
-      elbow:    [lm[si[1]].x * W, lm[si[1]].y * H],
-      wrist:    [lm[si[2]].x * W, lm[si[2]].y * H],
+      elbow: [lm[si[1]].x * W, lm[si[1]].y * H],
+      wrist: [lm[si[2]].x * W, lm[si[2]].y * H],
     },
   };
 }
 
 function analysePosture(lm, W, H) {
-  const nose     = [lm[0].x  * W, lm[0].y  * H];
-  const lShoulder= [lm[11].x * W, lm[11].y * H];
-  const rShoulder= [lm[12].x * W, lm[12].y * H];
-  const lHip     = [lm[23].x * W, lm[23].y * H];
-  const rHip     = [lm[24].x * W, lm[24].y * H];
-  const lEar     = [lm[7].x  * W, lm[7].y  * H];
-  const rEar     = [lm[8].x  * W, lm[8].y  * H];
+  const nose = [lm[0].x * W, lm[0].y * H];
+  const lShoulder = [lm[11].x * W, lm[11].y * H];
+  const rShoulder = [lm[12].x * W, lm[12].y * H];
+  const lHip = [lm[23].x * W, lm[23].y * H];
+  const rHip = [lm[24].x * W, lm[24].y * H];
+  const lEar = [lm[7].x * W, lm[7].y * H];
+  const rEar = [lm[8].x * W, lm[8].y * H];
 
-  const midShoulder = [(lShoulder[0]+rShoulder[0])/2, (lShoulder[1]+rShoulder[1])/2];
-  const midHip      = [(lHip[0]+rHip[0])/2,           (lHip[1]+rHip[1])/2];
-  const midEar      = [(lEar[0]+rEar[0])/2,           (lEar[1]+rEar[1])/2];
+  const midShoulder = [(lShoulder[0] + rShoulder[0]) / 2, (lShoulder[1] + rShoulder[1]) / 2];
+  const midHip = [(lHip[0] + rHip[0]) / 2, (lHip[1] + rHip[1]) / 2];
+  const midEar = [(lEar[0] + rEar[0]) / 2, (lEar[1] + rEar[1]) / 2];
 
-  let score  = 100;
+  let score = 100;
   const issues = [];
 
-  if (Math.abs(lShoulder[1] - rShoulder[1]) / H > 0.04)
-    { issues.push("Uneven shoulders — level them out"); score -= 25; }
-  if (Math.abs(nose[0] - midShoulder[0]) / W > 0.06)
-    { issues.push("Head tilted — centre your neck");    score -= 20; }
-  if (Math.abs(midShoulder[0] - midHip[0]) / W > 0.05)
-    { issues.push("Spine not vertical — stand straight"); score -= 25; }
-  if ((midShoulder[1] - midEar[1]) < H * 0.05)
-    { issues.push("Head dropping forward — lift chin"); score -= 15; }
+  if (Math.abs(lShoulder[1] - rShoulder[1]) / H > 0.04) { issues.push("Uneven shoulders — level them out"); score -= 25; }
+  if (Math.abs(nose[0] - midShoulder[0]) / W > 0.06) { issues.push("Head tilted — centre your neck"); score -= 20; }
+  if (Math.abs(midShoulder[0] - midHip[0]) / W > 0.05) { issues.push("Spine not vertical — stand straight"); score -= 25; }
+  if ((midShoulder[1] - midEar[1]) < H * 0.05) { issues.push("Head dropping forward — lift chin"); score -= 15; }
 
   score = Math.max(0, score);
   const feedback =
     score >= 90 ? "Excellent posture!" :
-    score >= 70 ? "Good — minor adjustments needed" :
-    score >= 50 ? "Fair — see corrections below" :
-                  "Poor posture — correct before continuing";
+      score >= 70 ? "Good — minor adjustments needed" :
+        score >= 50 ? "Fair — see corrections below" :
+          "Poor posture — correct before continuing";
 
   return {
     score,
@@ -159,11 +155,11 @@ function analysePosture(lm, W, H) {
 
 function renderSquat(ctx, pts, angle) {
   const c = angle < 100 ? "#22c55e" : "#f59e0b";
-  drawLine(ctx, pts.lHip,   pts.lKnee,   "#a855f7");
-  drawLine(ctx, pts.lKnee,  pts.lAnkle,  "#a855f7");
-  drawLine(ctx, pts.rHip,   pts.rKnee,   "#7c3aed");
-  drawLine(ctx, pts.rKnee,  pts.rAnkle,  "#7c3aed");
-  drawLine(ctx, pts.lHip,   pts.rHip,    "#6b21a8", 2);
+  drawLine(ctx, pts.lHip, pts.lKnee, "#a855f7");
+  drawLine(ctx, pts.lKnee, pts.lAnkle, "#a855f7");
+  drawLine(ctx, pts.rHip, pts.rKnee, "#7c3aed");
+  drawLine(ctx, pts.rKnee, pts.rAnkle, "#7c3aed");
+  drawLine(ctx, pts.lHip, pts.rHip, "#6b21a8", 2);
   [pts.lHip, pts.lKnee, pts.lAnkle, pts.rHip, pts.rKnee, pts.rAnkle]
     .forEach((p) => drawDot(ctx, p, c, 7));
   drawAngleLabel(ctx, `${Math.round(angle)}°`, pts.lKnee);
@@ -172,7 +168,7 @@ function renderSquat(ctx, pts, angle) {
 function renderCurl(ctx, pts, angle) {
   const c = angle < 60 ? "#ef4444" : "#22c55e";
   drawLine(ctx, pts.shoulder, pts.elbow, "#a855f7");
-  drawLine(ctx, pts.elbow,    pts.wrist, "#a855f7");
+  drawLine(ctx, pts.elbow, pts.wrist, "#a855f7");
   [pts.shoulder, pts.elbow, pts.wrist].forEach((p) => drawDot(ctx, p, c));
   drawAngleLabel(ctx, `${Math.round(angle)}°`, pts.elbow);
 }
@@ -180,61 +176,61 @@ function renderCurl(ctx, pts, angle) {
 function renderPosture(ctx, pts, score) {
   const c = score >= 80 ? "#22c55e" : score >= 60 ? "#f59e0b" : "#ef4444";
   drawLine(ctx, pts.lShoulder, pts.rShoulder, c, 2);
-  drawLine(ctx, pts.lHip,      pts.rHip,      c, 2);
-  drawLine(ctx, pts.midShoulder, pts.midHip,  c, 2);
-  drawLine(ctx, pts.nose,      pts.midShoulder, c, 1);
+  drawLine(ctx, pts.lHip, pts.rHip, c, 2);
+  drawLine(ctx, pts.midShoulder, pts.midHip, c, 2);
+  drawLine(ctx, pts.nose, pts.midShoulder, c, 1);
   [pts.lShoulder, pts.rShoulder, pts.lHip, pts.rHip, pts.nose]
     .forEach((p) => drawDot(ctx, p, c, 6));
   ctx.fillStyle = score >= 80 ? "rgba(34,197,94,0.85)"
-                : score >= 60 ? "rgba(245,158,11,0.85)"
-                :               "rgba(239,68,68,0.85)";
+    : score >= 60 ? "rgba(245,158,11,0.85)"
+      : "rgba(239,68,68,0.85)";
   ctx.beginPath();
   ctx.roundRect(10, 10, 116, 46, 8);
   ctx.fill();
   ctx.fillStyle = "#fff";
-  ctx.font      = "bold 24px sans-serif";
+  ctx.font = "bold 24px sans-serif";
   ctx.fillText(`${score}/100`, 18, 44);
 }
 
 // ─── Exercise config ───────────────────────────────────────────────────────────
 
 const EXERCISES = [
-  { id: "squat",      label: "Squats",       icon: "🏋️" },
-  { id: "left_curl",  label: "Left Curl",    icon: "💪" },
-  { id: "right_curl", label: "Right Curl",   icon: "💪" },
-  { id: "posture",    label: "Posture Check", icon: "🧍" },
+  { id: "squat", label: "Squats", icon: "🏋️" },
+  { id: "left_curl", label: "Left Curl", icon: "💪" },
+  { id: "right_curl", label: "Right Curl", icon: "💪" },
+  { id: "posture", label: "Posture Check", icon: "🧍" },
 ];
 
 const TIPS = {
-  squat:      "Stand 1.5–2 m back so full body (head to ankle) is visible.",
-  left_curl:  "Keep your left elbow fixed — only the forearm moves.",
+  squat: "Stand 1.5–2 m back so full body (head to ankle) is visible.",
+  left_curl: "Keep your left elbow fixed — only the forearm moves.",
   right_curl: "Keep your right elbow fixed — only the forearm moves.",
-  posture:    "Face the camera directly. Shoulders and hips must be visible.",
+  posture: "Face the camera directly. Shoulders and hips must be visible.",
 };
 
 // ─── Main Component ────────────────────────────────────────────────────────────
 
 export default function Trainer() {
-  const videoRef    = useRef(null);
-  const canvasRef   = useRef(null);
-  const poseRef     = useRef(null);
-  const cameraRef   = useRef(null);
-  const stageRef    = useRef("UP");
-  const repsRef     = useRef(0);
+  const videoRef = useRef(null);
+  const canvasRef = useRef(null);
+  const poseRef = useRef(null);
+  const cameraRef = useRef(null);
+  const stageRef = useRef("UP");
+  const repsRef = useRef(0);
   const exerciseRef = useRef("squat");
 
-  const [exercise,      setExercise]      = useState("squat");
-  const [isActive,      setIsActive]      = useState(false);
-  const [reps,          setReps]          = useState(0);
-  const [feedback,      setFeedback]      = useState("Press Start Camera to begin");
-  const [angle,         setAngle]         = useState(180);
-  const [postureScore,  setPostureScore]  = useState(null);
+  const [exercise, setExercise] = useState("squat");
+  const [isActive, setIsActive] = useState(false);
+  const [reps, setReps] = useState(0);
+  const [feedback, setFeedback] = useState("Press Start Camera to begin");
+  const [angle, setAngle] = useState(180);
+  const [postureScore, setPostureScore] = useState(null);
   const [postureIssues, setPostureIssues] = useState([]);
 
   const logRep = useCallback(async (newReps) => {
     try {
       await axios.post(`${API}/log-rep`, {
-        reps:     newReps,
+        reps: newReps,
         exercise: exerciseRef.current,
         username: USERNAME,
       });
@@ -243,35 +239,35 @@ export default function Trainer() {
     }
   }, []);
   const uploadSnapshotToCloudinary = async () => {
-  try {
-    const canvas = canvasRef.current;
-    if (!canvas) return null;
+    try {
+      const canvas = canvasRef.current;
+      if (!canvas) return null;
 
-    // Convert canvas to blob
-    const blob = await new Promise((resolve) =>
-      canvas.toBlob(resolve, "image/jpeg", 0.9)
-    );
+      // Convert canvas to blob
+      const blob = await new Promise((resolve) =>
+        canvas.toBlob(resolve, "image/jpeg", 0.9)
+      );
 
-    if (!blob) return null;
+      if (!blob) return null;
 
-    const formData = new FormData();
-    formData.append("file", blob);
-    formData.append("upload_preset", CLOUDINARY_UPLOAD_PRESET);
+      const formData = new FormData();
+      formData.append("file", blob);
+      formData.append("upload_preset", CLOUDINARY_UPLOAD_PRESET);
 
-    const response = await axios.post(
-      `https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD_NAME}/image/upload`,
-      formData
-    );
+      const response = await axios.post(
+        `https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD_NAME}/image/upload`,
+        formData
+      );
 
-    console.log("✅ Snapshot uploaded:", response.data.secure_url);
-    return response.data.secure_url;
-  } catch (error) {
-    console.error("❌ Cloudinary upload failed:", error);
-    return null;
-  }
+      console.log("✅ Snapshot uploaded:", response.data.secure_url);
+      return response.data.secure_url;
+    } catch (error) {
+      console.error("❌ Cloudinary upload failed:", error);
+      return null;
+    }
   };
   const startCamera = useCallback(() => {
-    const Pose   = window.Pose;
+    const Pose = window.Pose;
     const Camera = window.Camera;
 
     if (!Pose || !Camera) {
@@ -285,20 +281,20 @@ export default function Trainer() {
     });
 
     pose.setOptions({
-      modelComplexity:        1,
-      smoothLandmarks:        true,
+      modelComplexity: 1,
+      smoothLandmarks: true,
       minDetectionConfidence: 0.6,
-      minTrackingConfidence:  0.5,
+      minTrackingConfidence: 0.5,
     });
 
     pose.onResults((results) => {
       const canvas = canvasRef.current;
-      const video  = videoRef.current;
+      const video = videoRef.current;
       if (!canvas || !video) return;
 
-      const W = video.videoWidth  || 640;
+      const W = video.videoWidth || 640;
       const H = video.videoHeight || 480;
-      canvas.width  = W;
+      canvas.width = W;
       canvas.height = H;
 
       const ctx = canvas.getContext("2d");
@@ -327,7 +323,7 @@ export default function Trainer() {
 
       } else if (ex === "left_curl" || ex === "right_curl") {
         const side = ex === "left_curl" ? "left" : "right";
-        const r    = analyseCurl(lm, W, H, stageRef.current, side);
+        const r = analyseCurl(lm, W, H, stageRef.current, side);
         stageRef.current = r.stage;
         if (r.counted) {
           repsRef.current += 1;
@@ -361,35 +357,35 @@ export default function Trainer() {
     setFeedback("Camera started — get into position");
   }, [logRep]);
 
-const stopCamera = async () => {
-  // Upload current workout frame before stopping
-  const imageUrl = await uploadSnapshotToCloudinary();
+  const stopCamera = async () => {
+    // Upload current workout frame before stopping
+    const imageUrl = await uploadSnapshotToCloudinary();
 
-  if (imageUrl) {
-    console.log("📸 Workout image saved:", imageUrl);
+    if (imageUrl) {
+      console.log("📸 Workout image saved:", imageUrl);
 
-    // OPTIONAL: send image URL to backend later if needed
-    // await axios.post(`${API}/save-image`, {
-    //   username: USERNAME,
-    //   image_url: imageUrl,
-    //   exercise: exerciseRef.current,
-    // });
-  }
+      // OPTIONAL: send image URL to backend later if needed
+      // await axios.post(`${API}/save-image`, {
+      //   username: USERNAME,
+      //   image_url: imageUrl,
+      //   exercise: exerciseRef.current,
+      // });
+    }
 
-  cameraRef.current?.stop();
-  cameraRef.current = null;
-  poseRef.current?.close();
-  poseRef.current = null;
-  setIsActive(false);
-  setFeedback("Camera stopped");
-  const ctx = canvasRef.current?.getContext("2d");
-  if (ctx) ctx.clearRect(0, 0, 640, 480);
+    cameraRef.current?.stop();
+    cameraRef.current = null;
+    poseRef.current?.close();
+    poseRef.current = null;
+    setIsActive(false);
+    setFeedback("Camera stopped");
+    const ctx = canvasRef.current?.getContext("2d");
+    if (ctx) ctx.clearRect(0, 0, 640, 480);
   };
 
   const changeExercise = (ex) => {
     setExercise(ex);
     exerciseRef.current = ex;
-    repsRef.current  = 0;
+    repsRef.current = 0;
     stageRef.current = ex === "squat" ? "UP" : "DOWN";
     setReps(0);
     setAngle(180);
@@ -398,9 +394,9 @@ const stopCamera = async () => {
     setFeedback("Exercise changed — get into position");
   };
 
-  const isPosture  = exercise === "posture";
+  const isPosture = exercise === "posture";
   const scoreColor = postureScore >= 80 ? "#16a34a" : postureScore >= 60 ? "#d97706" : "#dc2626";
-  const scoreBg    = postureScore >= 80 ? "#f0fdf4" : postureScore >= 60 ? "#fffbeb" : "#fef2f2";
+  const scoreBg = postureScore >= 80 ? "#f0fdf4" : postureScore >= 60 ? "#fffbeb" : "#fef2f2";
 
   return (
     <div style={{ padding: 24, maxWidth: 740, margin: "0 auto", fontFamily: "sans-serif" }}>
@@ -416,9 +412,9 @@ const stopCamera = async () => {
             padding: "8px 18px", borderRadius: 20, cursor: "pointer",
             border: "2px solid",
             borderColor: exercise === ex.id ? "#7c3aed" : "#e5e7eb",
-            background:  exercise === ex.id ? "#7c3aed" : "#f9fafb",
-            color:       exercise === ex.id ? "#fff"    : "#374151",
-            fontWeight:  exercise === ex.id ? 600 : 400, fontSize: 14,
+            background: exercise === ex.id ? "#7c3aed" : "#f9fafb",
+            color: exercise === ex.id ? "#fff" : "#374151",
+            fontWeight: exercise === ex.id ? 600 : 400, fontSize: 14,
           }}>
             {ex.icon} {ex.label}
           </button>
@@ -436,7 +432,7 @@ const stopCamera = async () => {
         </button>
         {!isPosture && (
           <button onClick={() => {
-            repsRef.current  = 0;
+            repsRef.current = 0;
             stageRef.current = exercise === "squat" ? "UP" : "DOWN";
             setReps(0); setAngle(180);
           }} style={{
@@ -468,8 +464,8 @@ const stopCamera = async () => {
             </span>
             <span style={{ fontSize: 15 }}>
               {exercise === "posture" ? "Stand facing the camera"
-               : exercise === "squat" ? "Stand so full body is visible"
-               : "Show your arm — press Start Camera"}
+                : exercise === "squat" ? "Stand so full body is visible"
+                  : "Show your arm — press Start Camera"}
             </span>
           </div>
         )}
@@ -486,8 +482,10 @@ const stopCamera = async () => {
             <p style={{ fontSize: 52, fontWeight: 700, color: "#2563eb", margin: 0, lineHeight: 1 }}>{Math.floor(reps / 10)}</p>
             <p style={{ color: "#1d4ed8", margin: "6px 0 0", fontSize: 14 }}>Sets (10 reps)</p>
           </div>
-          <div style={{ background: "#fff7ed", borderRadius: 12, padding: "18px 14px", textAlign: "center",
-            display: "flex", flexDirection: "column", justifyContent: "center" }}>
+          <div style={{
+            background: "#fff7ed", borderRadius: 12, padding: "18px 14px", textAlign: "center",
+            display: "flex", flexDirection: "column", justifyContent: "center"
+          }}>
             <p style={{ fontSize: 22, fontWeight: 700, color: "#c2410c", margin: 0 }}>{angle}°</p>
             <p style={{ fontSize: 13, color: "#c2410c", margin: "4px 0 0" }}>{feedback}</p>
           </div>
@@ -515,8 +513,8 @@ const stopCamera = async () => {
               <div key={i} style={{
                 padding: "10px 14px", borderRadius: 8, fontSize: 14,
                 background: issue.includes("passed") ? "#f0fdf4" : "#fef9c3",
-                color:      issue.includes("passed") ? "#15803d" : "#854d0e",
-                border:     `1px solid ${issue.includes("passed") ? "#bbf7d0" : "#fde68a"}`,
+                color: issue.includes("passed") ? "#15803d" : "#854d0e",
+                border: `1px solid ${issue.includes("passed") ? "#bbf7d0" : "#fde68a"}`,
               }}>
                 {issue.includes("passed") ? "✓ " : "⚠ "}{issue}
               </div>

@@ -30,12 +30,9 @@ app.add_middleware(GZipMiddleware, minimum_size=500)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
-        "https://ai-gym-fitness.onrender.com",
-        "https://ai-gym-fitness-vzj3.onrender.com",
         "http://localhost:5173",
-        "http://localhost:3000"
+        "https://ai-gym-fitness.onrender.com"
     ],
-    allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
