@@ -4,6 +4,7 @@ load_dotenv()
 from fastapi import FastAPI, Depends, Response
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.gzip import GZipMiddleware
+from sqlalchemy import func
 from sqlalchemy.orm import Session
 
 from database import (
@@ -77,33 +78,36 @@ async def favicon():
 
 @app.get("/dashboard", tags=["Dashboard"])
 def get_dashboard(db: Session = Depends(get_db)):
-    workout_sessions = db.query(WorkoutSession).all()
-    total_reps = sum(s.reps for s in workout_sessions)
-    total_sessions = len(workout_sessions)
+    # Optimize WorkoutSession aggregation
+    total_reps = db.query(func.sum(WorkoutSession.reps)).scalar() or 0
+    total_sessions = db.query(WorkoutSession).count()
 
-    by_exercise = {}
-    for s in workout_sessions:
-        if s.exercise:
-            by_exercise[s.exercise] = by_exercise.get(s.exercise, 0) + s.reps
+    by_exercise_query = db.query(WorkoutSession.exercise, func.sum(WorkoutSession.reps)).group_by(WorkoutSession.exercise).all()
+    by_exercise = {exercise: reps for exercise, reps in by_exercise_query if exercise}
     favourite_exercise = max(by_exercise, key=by_exercise.get) if by_exercise else "N/A"
 
-    habit_logs = db.query(HabitLog).all()
-    total_logged = len(habit_logs)
-    sessions_attended = sum(1 for l in habit_logs if l.came_to_gym == 1)
+    # Optimize HabitLog aggregation
+    total_logged = db.query(HabitLog).count()
+    sessions_attended = db.query(HabitLog).filter(HabitLog.came_to_gym == 1).count()
     attendance_rate = round((sessions_attended / total_logged * 100), 1) if total_logged > 0 else 0
 
+    # Streak logic (fetch only came_to_gym status to check recent streak)
+    recent_habits = db.query(HabitLog.came_to_gym).order_by(HabitLog.created_at.desc()).all()
     current_streak = 0
-    for l in reversed(habit_logs):
+    for l in recent_habits:
         if l.came_to_gym == 1:
             current_streak += 1
         else:
             break
 
-    diet_logs = db.query(DietLog).order_by(DietLog.created_at.desc()).all()
-    latest_diet = diet_logs[0] if diet_logs else None
+    # Optimize DietLog fetching (only load the latest entry)
+    total_plans = db.query(DietLog).count()
+    latest_diet = db.query(DietLog).order_by(DietLog.created_at.desc()).first()
 
-    user_messages = db.query(ChatHistory).filter(ChatHistory.role == "user").all()
-    compounds = [m.compound for m in user_messages if m.compound is not None]
+    # Optimize ChatHistory/sentiment fetching
+    total_messages = db.query(ChatHistory).filter(ChatHistory.role == "user").count()
+    compounds_query = db.query(ChatHistory.compound).filter(ChatHistory.role == "user", ChatHistory.compound != None).all()
+    compounds = [c[0] for c in compounds_query]
     avg_sentiment = round(sum(compounds) / len(compounds), 3) if compounds else 0.0
     sentiment_trend = (
         "positive" if avg_sentiment > 0.05 else
@@ -111,11 +115,13 @@ def get_dashboard(db: Session = Depends(get_db)):
         "neutral"
     )
 
-    recommendations = db.query(Recommendation).all()
-    photos = db.query(ProgressPhoto).all()
+    # Optimize Recommendation and ProgressPhoto counts
+    recommendations_count = db.query(Recommendation).count()
+    photos_count = db.query(ProgressPhoto).count()
 
-    telemetry = db.query(IoTTelemetry).order_by(IoTTelemetry.created_at.desc()).limit(20).all()
-    heart_rate_history = [t.heart_rate for t in reversed(telemetry) if t.heart_rate]
+    # Telemetry fetching (keep limit 20, but query only heart_rate column)
+    telemetry_query = db.query(IoTTelemetry.heart_rate).order_by(IoTTelemetry.created_at.desc()).limit(20).all()
+    heart_rate_history = [t[0] for t in reversed(telemetry_query) if t[0]]
 
     return {
         "workout": {
@@ -131,21 +137,21 @@ def get_dashboard(db: Session = Depends(get_db)):
             "total_sessions": sessions_attended,
         },
         "diet": {
-            "total_plans": len(diet_logs),
+            "total_plans": total_plans,
             "latest_calories": latest_diet.calorie_target if latest_diet else None,
             "latest_goal": latest_diet.goal if latest_diet else None,
             "latest_bmi": latest_diet.bmi if latest_diet else None,
         },
         "buddy": {
-            "total_messages": len(user_messages),
+            "total_messages": total_messages,
             "avg_sentiment": avg_sentiment,
             "sentiment_trend": sentiment_trend,
         },
         "recommender": {
-            "plans_generated": len(recommendations),
+            "plans_generated": recommendations_count,
         },
         "storage": {
-            "progress_photos": len(photos),
+            "progress_photos": photos_count,
         },
         "telemetry": {
             "heart_rate_history": heart_rate_history,

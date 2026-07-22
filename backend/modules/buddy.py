@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends
 from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
-from database import get_db, ChatHistory
+from database import get_db, ChatHistory, User, WorkoutSession
 import random
 import os
 from google import genai
@@ -29,6 +29,8 @@ except Exception as e:
 class ChatRequest(BaseModel):
     username: str = Field(default="guest")
     message: str = Field(..., min_length=1)
+    bot_name: str = Field(default="FitBot")
+    bot_gender: str = Field(default="neutral")
 
 class ChatResponse(BaseModel):
     reply: str
@@ -136,31 +138,75 @@ def chat(data: ChatRequest, db: Session = Depends(get_db)):
     history = list(reversed(history))  # chronological order
     source = "rule-based"
 
+    # Fetch User Profile
+    user = db.query(User).filter(User.username == data.username).first()
+    user_profile = ""
+    if user:
+        user_profile = f"Age: {user.age or 'N/A'}, Gender: {user.gender or 'N/A'}, Weight: {user.weight_kg or 'N/A'} kg, Height: {user.height_cm or 'N/A'} cm, Goal: {user.goal or 'N/A'}, Fitness Level: {user.fitness_level or 'N/A'}"
+
+    # Fetch Recent Workout Data
+    workout_sessions = (
+        db.query(WorkoutSession)
+        .filter(WorkoutSession.username == data.username)
+        .order_by(WorkoutSession.created_at.desc())
+        .limit(5)
+        .all()
+    )
+    
+    workout_context = []
+    for s in workout_sessions:
+        if s.exercise == "habit_checkin":
+            status = "Came to gym" if s.came_to_gym else "Did not come to gym"
+            workout_context.append(f"- {s.date}: Habit Check-in (Mood: {s.mood}/5, Stress: {s.stress}/5, Status: {status})")
+        else:
+            workout_context.append(f"- {s.date}: {s.exercise} ({s.sets_done} sets of {s.reps} reps)")
+    
+    workout_text = "\n".join(workout_context) if workout_context else "No workouts logged yet."
+
     if USE_GEMINI and client is not None:
         try:
-            # Build history context
-            history_text = "\n".join([f"{msg.role}: {msg.message}" for msg in history[-5:]])
+            bot_name = data.bot_name
+            bot_gender = data.bot_gender
+            # Build history context using all history (up to 10 messages)
+            history_text = "\n".join([f"{msg.role}: {msg.message}" for msg in history])
             prompt = f"""
-            You are FitBot, a supportive AI gym buddy.
-            The user is feeling: {mood} (Sentiment Score: {compound:.2f}).
-            Recent chat history:
+            You are {bot_name}, a supportive {bot_gender} AI gym buddy.
+            
+            User Profile:
+            {user_profile if user_profile else "No profile set yet."}
+            
+            Recent Workout & Activity Data:
+            {workout_text}
+            
+            Current User Mood: {mood} (Sentiment Score: {compound:.2f})
+            
+            Recent Chat History:
             {history_text}
             
             User's new message: "{data.message}"
             
             Provide a short, highly motivating, and empathetic response (1-3 sentences maximum).
-            Do not use markdown. Just reply as a friend.
+            Naturally reference their progress, workout data, consistency, or goals if relevant.
+            Do not use markdown. Just reply as a friendly gym buddy speaking directly to them.
             """
             try:
                 response = client.models.generate_content(
-                    model="gemini-2.5-flash",
+                    model="gemini-1.5-pro",
                     contents=prompt
                 )
-            except Exception:
-                response = client.models.generate_content(
-                    model="gemini-2.0-flash",
-                    contents=prompt
-                )
+            except Exception as e:
+                print("[WARN] gemini-1.5-pro failed, trying gemini-1.5-flash:", e)
+                try:
+                    response = client.models.generate_content(
+                        model="gemini-1.5-flash",
+                        contents=prompt
+                    )
+                except Exception as e2:
+                    print("[WARN] gemini-1.5-flash failed, trying gemini-2.5-flash:", e2)
+                    response = client.models.generate_content(
+                        model="gemini-2.5-flash",
+                        contents=prompt
+                    )
             reply = response.text.strip()
             source = "gemini"
         except Exception as e:

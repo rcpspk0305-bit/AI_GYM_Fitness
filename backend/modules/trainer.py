@@ -1,5 +1,6 @@
 from fastapi import APIRouter, Depends
 from pydantic import BaseModel
+from sqlalchemy import func
 from sqlalchemy.orm import Session
 from database import get_db, WorkoutSession,ProgressPhoto
 import pandas as pd
@@ -292,18 +293,19 @@ def get_progress_photos(username: str, db: Session = Depends(get_db)):
     }
 @router.get("/workout-stats")
 def get_workout_stats(db: Session = Depends(get_db)):
-    sessions = db.query(WorkoutSession).all()
-    if not sessions:
+    total_sessions = db.query(WorkoutSession).count()
+    if total_sessions == 0:
         return {"total_reps": 0, "total_sessions": 0, "favourite_exercise": "N/A", "by_exercise": {}}
-    total_reps  = sum(s.reps for s in sessions)
-    by_exercise = {}
-    for s in sessions:
-        if s.exercise:
-            by_exercise[s.exercise] = by_exercise.get(s.exercise, 0) + s.reps
+        
+    total_reps = db.query(func.sum(WorkoutSession.reps)).scalar() or 0
+    by_exercise_query = db.query(WorkoutSession.exercise, func.sum(WorkoutSession.reps)).group_by(WorkoutSession.exercise).all()
+    by_exercise = {exercise: reps for exercise, reps in by_exercise_query if exercise}
+    favourite_exercise = max(by_exercise, key=by_exercise.get) if by_exercise else "N/A"
+    
     return {
         "total_reps":         total_reps,
-        "total_sessions":     len(sessions),
-        "favourite_exercise": max(by_exercise, key=by_exercise.get) if by_exercise else "N/A",
+        "total_sessions":     total_sessions,
+        "favourite_exercise": favourite_exercise,
         "by_exercise":        by_exercise,
     }
 @router.get("/insights")

@@ -49,3 +49,10 @@ RENDER_DEPLOY_GUIDE.md
 render.yaml
 fronted/
 .gitignore
+chroma_db/
+dist/
+node_modules/
+*.env
+*.env.local
+*.env.development
+*.env.production

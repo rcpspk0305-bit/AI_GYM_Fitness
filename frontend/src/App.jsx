@@ -7,6 +7,7 @@ import Buddy from "./pages/Buddy";
 import Recommender from "./pages/Recommender";
 import Dashboard from "./pages/Dashboard";
 import Login from "./pages/Login";
+import FloatingChatbot from "./components/FloatingChatbot";
 import "./App.css";
 
 const navItems = [
@@ -63,6 +64,7 @@ function AppShell({ onLogout }) {
           <Route path="/recommender" element={<Recommender />} />
         </Routes>
       </main>
+      <FloatingChatbot />
     </div>
   );
 }

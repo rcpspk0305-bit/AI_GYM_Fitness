@@ -48,4 +48,9 @@ output/
 RENDER_DEPLOY_GUIDE.md
 render.yaml
 .gitignore
-.env    
+.env
+chroma_db/
+backend/data/
+*.db
+*.sqlite
+*.sqlite3

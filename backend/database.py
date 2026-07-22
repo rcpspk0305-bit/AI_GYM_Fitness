@@ -35,7 +35,7 @@ class User(Base):
 class WorkoutSession(Base):
     __tablename__ = "workout_sessions"
     id = Column(Integer, primary_key=True, index=True)
-    username = Column(String, default="guest")
+    username = Column(String, index=True, default="guest")
     exercise = Column(String, default="unknown")
     reps = Column(Integer, default=0)
     sets_done = Column(Integer, default=0)
