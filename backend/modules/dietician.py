@@ -198,17 +198,29 @@ Return JSON in this exact structure:
 }}
 """
 
-    response = client.models.generate_content(
-        model="gemini-2.5-flash",
-        contents=prompt
-    )
+    try:
+        response = client.models.generate_content(
+            model="gemini-2.5-flash",
+            contents=prompt
+        )
+    except Exception:
+        response = client.models.generate_content(
+            model="gemini-2.0-flash",
+            contents=prompt
+        )
 
     text = response.text.strip()
 
-    if text.startswith("```json"):
-        text = text.replace("```json", "").replace("```", "").strip()
-    elif text.startswith("```"):
-        text = text.replace("```", "").strip()
+    # Extract JSON boundary if possible
+    start_idx = text.find("{")
+    end_idx = text.rfind("}")
+    if start_idx != -1 and end_idx != -1:
+        text = text[start_idx:end_idx+1]
+    else:
+        if text.startswith("```json"):
+            text = text.replace("```json", "").replace("```", "").strip()
+        elif text.startswith("```"):
+            text = text.replace("```", "").strip()
 
     parsed = json.loads(text)
     return parsed
@@ -299,10 +311,16 @@ Be specific, practical, and easy to understand.
 
         if USE_GEMINI and client is not None:
             try:
-                response = client.models.generate_content(
-                    model="gemini-2.5-flash",
-                    contents=prompt
-                )
+                try:
+                    response = client.models.generate_content(
+                        model="gemini-2.5-flash",
+                        contents=prompt
+                    )
+                except Exception:
+                    response = client.models.generate_content(
+                        model="gemini-2.0-flash",
+                        contents=prompt
+                    )
                 return ChatResponse(answer=response.text.strip())
             except Exception as gemini_error:
                 print("[WARN] Gemini chat failed, using fallback:", gemini_error)

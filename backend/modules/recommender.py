@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
-from database import get_db, Recommendation, WorkoutSession, User, DietProfile
+from database import get_db, Recommendation, WorkoutSession, User, DietProfile, HabitLog
 import json
 import random
 
@@ -113,10 +113,19 @@ def generate_plan(req: PlanRequest, db: Session = Depends(get_db)):
     goal = req.goal.lower()
     workouts = WORKOUT_LIBRARY.get(goal, WORKOUT_LIBRARY["maintenance"])
 
-    # equipment filter
+    # Equipment compatibility rules:
+    # - "gym" has access to: "gym", "dumbbells", "none"
+    # - "dumbbells" has access to: "dumbbells", "none"
+    # - "none" has access to: "none" only
+    allowed_equip = ["none"]
+    if req.equipment == "dumbbells":
+        allowed_equip.append("dumbbells")
+    elif req.equipment == "gym":
+        allowed_equip.extend(["dumbbells", "gym"])
+
     filtered = [
         w for w in workouts
-        if req.equipment == "none" or w["equipment"] in [req.equipment, "none", "gym"]
+        if w["equipment"] in allowed_equip
     ]
 
     if not filtered:
@@ -200,16 +209,21 @@ def get_workout_tips(goal: str, level: str):
 
 @router.post("/smart-recommend")
 def smart_recommend(req: SmartRecommendRequest, db: Session = Depends(get_db)):
-    logs = (
-        db.query(WorkoutSession)
-        .filter(WorkoutSession.username == req.username)
-        .order_by(WorkoutSession.created_at.desc())
-        .limit(10)
-        .all()
-    )
+    user = db.query(User).filter(User.username == req.username).first()
 
-    consistency = round((sum(1 for l in logs if l.came_to_gym) / len(logs)) * 100, 1) if logs else 50
-    avg_hour = int(sum(l.hour for l in logs) / len(logs)) if logs else 18
+    if not user:
+        consistency = 50
+        avg_hour = 18
+    else:
+        logs = (
+            db.query(HabitLog)
+            .filter(HabitLog.user_id == user.id)
+            .order_by(HabitLog.created_at.desc())
+            .limit(10)
+            .all()
+        )
+        consistency = round((sum(1 for l in logs if l.came_to_gym == 1) / len(logs)) * 100, 1) if logs else 50
+        avg_hour = int(sum(l.hour for l in logs) / len(logs)) if logs else 18
 
     location_key = req.location.lower().strip()
     gyms = GYM_SUGGESTIONS.get(location_key, GYM_SUGGESTIONS["default"])

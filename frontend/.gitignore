@@ -47,3 +47,5 @@ Thumbs.db
 output/
 RENDER_DEPLOY_GUIDE.md
 render.yaml
+fronted/
+.gitignore

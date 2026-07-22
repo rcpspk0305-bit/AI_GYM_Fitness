@@ -19,14 +19,21 @@ mqtt_status = {
 client_instance = None
 
 
+def safe_float(val, default=0.0):
+    try:
+        return float(val) if val is not None else default
+    except (ValueError, TypeError):
+        return default
+
+
 def build_recommendation(data: dict) -> str:
-    heart_rate = float(data.get("heart_rate") or 0)
-    fatigue = float(data.get("fatigue_score") or 0)
+    heart_rate = safe_float(data.get("heart_rate"))
+    fatigue = safe_float(data.get("fatigue_score"))
     device_type = str(data.get("device_type", "")).lower()
-    speed = float(data.get("speed") or 0)
-    incline = float(data.get("incline") or 0)
-    resistance = float(data.get("resistance") or 0)
-    rep_speed = float(data.get("rep_speed") or 0)
+    speed = safe_float(data.get("speed"))
+    incline = safe_float(data.get("incline"))
+    resistance = safe_float(data.get("resistance"))
+    rep_speed = safe_float(data.get("rep_speed"))
 
     messages = []
 

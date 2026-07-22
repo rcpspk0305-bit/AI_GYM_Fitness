@@ -151,10 +151,16 @@ def chat(data: ChatRequest, db: Session = Depends(get_db)):
             Provide a short, highly motivating, and empathetic response (1-3 sentences maximum).
             Do not use markdown. Just reply as a friend.
             """
-            response = client.models.generate_content(
-                model="gemini-2.5-flash",
-                contents=prompt
-            )
+            try:
+                response = client.models.generate_content(
+                    model="gemini-2.5-flash",
+                    contents=prompt
+                )
+            except Exception:
+                response = client.models.generate_content(
+                    model="gemini-2.0-flash",
+                    contents=prompt
+                )
             reply = response.text.strip()
             source = "gemini"
         except Exception as e:

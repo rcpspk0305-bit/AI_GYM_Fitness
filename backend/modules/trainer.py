@@ -36,25 +36,33 @@ class PredictRequest(BaseModel):
     username:    str = "guest"
 
 
-def load_df_from_db(db: Session) -> pd.DataFrame:
+def load_df_from_db(db: Session, username: str = "Cherry") -> pd.DataFrame:
     """Load all habit logs from SQLite — used for ML training."""
-    logs = db.query(WorkoutSession).all()
+    user = db.query(User).filter(User.username == username).first()
+    if not user:
+        return pd.DataFrame()
+    logs = db.query(HabitLog).filter(HabitLog.user_id == user.id).all()
     if not logs:
         return pd.DataFrame()
-    return pd.DataFrame([{
+    df = pd.DataFrame([{
         "day_of_week": l.day_of_week,
         "hour":        l.hour,
         "mood":        l.mood,
         "stress":      l.stress,
         "came_to_gym": l.came_to_gym,
     } for l in logs])
+    df = df.dropna(subset=["day_of_week", "hour", "mood", "stress", "came_to_gym"])
+    return df
 
 
 @router.post("/log")
 def log_habit(entry: LogEntry, db: Session = Depends(get_db)):
     """Log daily habit entry — called from Habit Tracker page."""
+    from database import get_or_create_user
     now = datetime.now()
+    user = get_or_create_user(db, entry.username)
     log = HabitLog(
+        user_id     = user.id,
         date        = now.strftime("%Y-%m-%d"),
         day_of_week = now.weekday(),
         hour        = entry.hour,
@@ -79,13 +87,13 @@ def log_habit(entry: LogEntry, db: Session = Depends(get_db)):
     existing = pd.read_csv(CSV_PATH)
     pd.concat([existing, new_row], ignore_index=True).to_csv(CSV_PATH, index=False)
 
-    return {"status": "logged", "total_entries": db.query(HabitLog).count()}
+    return {"status": "logged", "total_entries": db.query(HabitLog).filter(HabitLog.user_id == user.id).count()}
 
 
 @router.post("/predict")
 def predict_attendance(req: PredictRequest, db: Session = Depends(get_db)):
     # ── Use DB data for training (more reliable than CSV) ──
-    df = load_df_from_db(db)
+    df = load_df_from_db(db, req.username)
 
     if len(df) < 5:
         base = 0.3
@@ -103,6 +111,17 @@ def predict_attendance(req: PredictRequest, db: Session = Depends(get_db)):
     X = df[features].values
     y = (1 - df["came_to_gym"]).astype(int).values
 
+    if len(np.unique(y)) < 2:
+        # Fallback if we only have one class of data logged
+        only_class = y[0]  # 1 if skipped, 0 if came
+        skip_prob = float(only_class)
+        return {
+            "skip_probability": skip_prob,
+            "nudge":            _nudge(skip_prob),
+            "model":            "rule-based fallback (requires both skips and visits in data)",
+            "data_count":       len(df),
+        }
+
     clf = RandomForestClassifier(n_estimators=150, random_state=42)
     clf.fit(X, y)
 
@@ -114,9 +133,13 @@ def predict_attendance(req: PredictRequest, db: Session = Depends(get_db)):
     importance = dict(zip(features, clf.feature_importances_.round(3)))
 
     # ── Personalised nudge using DB history ──
-    user_logs = db.query(WorkoutSession ).all()
-    went_high_stress = sum(1 for l in user_logs if l.stress >= 4 and l.came_to_gym == 1)
-    total_high_stress = sum(1 for l in user_logs if l.stress >= 4)
+    user = db.query(User).filter(User.username == req.username).first()
+    if user:
+        user_logs = db.query(HabitLog).filter(HabitLog.user_id == user.id).all()
+    else:
+        user_logs = []
+    went_high_stress = sum(1 for l in user_logs if l.stress is not None and l.stress >= 4 and l.came_to_gym == 1)
+    total_high_stress = sum(1 for l in user_logs if l.stress is not None and l.stress >= 4)
     stress_rate = (went_high_stress / total_high_stress * 100) if total_high_stress > 0 else 0
 
     extra_nudge = ""
@@ -144,8 +167,12 @@ def _nudge(prob: float) -> str:
 
 
 @router.get("/streak")
-def get_streak(db: Session = Depends(get_db)):
-    logs = db.query(WorkoutSession).order_by(WorkoutSession.created_at).all()
+def get_streak(username: str = "Cherry", db: Session = Depends(get_db)):
+    user = db.query(User).filter(User.username == username).first()
+    if not user:
+        return {"streak": 0, "total_sessions": 0, "history": []}
+
+    logs = db.query(HabitLog).filter(HabitLog.user_id == user.id).order_by(HabitLog.created_at).all()
     if not logs:
         return {"streak": 0, "total_sessions": 0, "history": []}
 
@@ -155,7 +182,7 @@ def get_streak(db: Session = Depends(get_db)):
         else: break
 
     history = [
-        {"date": l.date, "came_to_gym": l.came_to_gym, "mood": l.mood, "stress": l.stress}
+        {"date": l.date, "came_to_gym": int(l.came_to_gym) if l.came_to_gym is not None else 0, "mood": l.mood, "stress": l.stress}
         for l in logs[-14:]
     ]
 
@@ -168,8 +195,12 @@ def get_streak(db: Session = Depends(get_db)):
 
 
 @router.get("/stats")
-def get_stats(db: Session = Depends(get_db)):
-    logs = db.query(WorkoutSession).all()
+def get_stats(username: str = "Cherry", db: Session = Depends(get_db)):
+    user = db.query(User).filter(User.username == username).first()
+    if not user:
+        return {"attendance_rate": 0, "best_day": "N/A", "best_hour": "N/A", "avg_mood": 0}
+
+    logs = db.query(HabitLog).filter(HabitLog.user_id == user.id).all()
     if not logs:
         return {"attendance_rate": 0, "best_day": "N/A", "best_hour": "N/A", "avg_mood": 0}
 
@@ -276,8 +307,12 @@ def get_workout_stats(db: Session = Depends(get_db)):
         "by_exercise":        by_exercise,
     }
 @router.get("/insights")
-def get_insights(db: Session = Depends(get_db)):
-    logs = db.query(HabitLog).all()
+def get_insights(username: str = "Cherry", db: Session = Depends(get_db)):
+    user = db.query(User).filter(User.username == username).first()
+    if not user:
+        return {"message": "No data yet", "insights": []}
+
+    logs = db.query(HabitLog).filter(HabitLog.user_id == user.id).all()
     if not logs:
         return {"message": "No data yet", "insights": []}
     
@@ -304,8 +339,13 @@ def get_insights(db: Session = Depends(get_db)):
         "total_logged":    total,
     }
 @router.get("/habit-stats")
-def get_habit_stats(db: Session = Depends(get_db)):
-    logs = db.query(HabitLog).all()
+def get_habit_stats(username: str = "Cherry", db: Session = Depends(get_db)):
+    user = db.query(User).filter(User.username == username).first()
+    if not user:
+        return {"attendance_rate": 0, "best_day": "N/A",
+                "best_hour": "N/A", "avg_mood": 0}
+
+    logs = db.query(HabitLog).filter(HabitLog.user_id == user.id).all()
     if not logs:
         return {"attendance_rate": 0, "best_day": "N/A",
                 "best_hour": "N/A", "avg_mood": 0}

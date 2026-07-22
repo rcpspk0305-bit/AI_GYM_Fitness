@@ -3,7 +3,9 @@ from datetime import datetime
 from sqlalchemy import create_engine, Column, Integer, Float, String, Boolean, DateTime, Text
 from sqlalchemy.orm import declarative_base, sessionmaker, Session
 
-BASE_STORAGE = os.getenv("APP_STORAGE", "/opt/render/project/src/storage")
+BASE_STORAGE = os.getenv("APP_STORAGE")
+if not BASE_STORAGE:
+    BASE_STORAGE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "data")
 os.makedirs(BASE_STORAGE, exist_ok=True)
 
 DATABASE_URL = f"sqlite:///{BASE_STORAGE}/gym_assistant.db"
