@@ -813,3 +813,115 @@ body::after {
     transform: scale(1.0);
   }
 }
+
+/* ─────────────────────────────────────────────
+   Structured Chat Response Box Styles
+   ───────────────────────────────────────────── */
+.chatbot-recap-box,
+.chatbot-analysis-box,
+.chatbot-suggestions-box,
+.chatbot-plan-box {
+  display: flex;
+  gap: 10px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 10px;
+  padding: 10px 12px;
+  margin-top: 10px;
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--color-text-primary);
+  text-align: left;
+}
+
+/* Page-level Buddy (light bubbles) */
+.chatbot-bubble-wrapper.bot .chatbot-recap-box,
+.chatbot-bubble-wrapper.bot .chatbot-analysis-box,
+.chatbot-bubble-wrapper.bot .chatbot-suggestions-box,
+.chatbot-bubble-wrapper.bot .chatbot-plan-box {
+  background: rgba(15, 23, 42, 0.04);
+  border: 1px solid rgba(15, 23, 42, 0.08);
+  color: #1f2937;
+}
+
+/* Global Floating Buddy (dark bubbles) */
+.floating-chatbot-window .chatbot-bubble-wrapper.bot .chatbot-recap-box,
+.floating-chatbot-window .chatbot-bubble-wrapper.bot .chatbot-analysis-box,
+.floating-chatbot-window .chatbot-bubble-wrapper.bot .chatbot-suggestions-box,
+.floating-chatbot-window .chatbot-bubble-wrapper.bot .chatbot-plan-box {
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  color: var(--color-text-primary);
+}
+
+.chatbot-box-icon {
+  font-size: 16px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: flex-start;
+  margin-top: 2px;
+}
+
+.chatbot-box-content {
+  flex: 1;
+}
+
+.chatbot-suggestions-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 6px;
+}
+
+.chatbot-suggestion-tag {
+  background: rgba(139, 92, 246, 0.12);
+  color: var(--color-accent-purple);
+  border: 1px solid rgba(139, 92, 246, 0.25);
+  border-radius: 12px;
+  padding: 2px 10px;
+  font-size: 11px;
+  font-weight: 500;
+  display: inline-block;
+}
+
+/* Badge highlights in light/dark themes */
+.chatbot-bubble-wrapper.bot .chatbot-suggestion-tag {
+  background: rgba(124, 58, 237, 0.08);
+  color: #6d28d9;
+  border: 1px solid rgba(124, 58, 237, 0.15);
+}
+
+.floating-chatbot-window .chatbot-bubble-wrapper.bot .chatbot-suggestion-tag {
+  background: rgba(139, 92, 246, 0.12);
+  color: #c084fc;
+  border: 1px solid rgba(139, 92, 246, 0.25);
+}
+
+.chatbot-plan-pre {
+  margin: 6px 0 0 0;
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: 6px;
+  padding: 8px 10px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 12px;
+  white-space: pre-wrap;
+  overflow-x: auto;
+  color: var(--color-text-primary);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.chatbot-bubble-wrapper.bot .chatbot-plan-pre {
+  background: rgba(15, 23, 42, 0.05);
+  color: #1f2937;
+  border: 1px solid rgba(15, 23, 42, 0.08);
+}
+
+.floating-chatbot-window .chatbot-bubble-wrapper.bot .chatbot-plan-pre {
+  background: rgba(0, 0, 0, 0.25);
+  color: var(--color-text-primary);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.chatbot-bubble-main-text {
+  margin: 0;
+}

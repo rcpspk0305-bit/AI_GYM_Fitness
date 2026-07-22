@@ -63,9 +63,20 @@ export default function FloatingChatbot() {
         bot_gender: botGender
       });
 
-      const { reply } = res.data;
+      const { reply, recap, session_analysis, suggested_activities, workout_plan } = res.data;
       const botMsgTime = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-      setMessages((prev) => [...prev, { role: "bot", text: reply, time: botMsgTime }]);
+      setMessages((prev) => [
+        ...prev,
+        {
+          role: "bot",
+          text: reply,
+          recap,
+          sessionAnalysis: session_analysis,
+          suggestedActivities: suggested_activities,
+          workoutPlan: workout_plan,
+          time: botMsgTime
+        }
+      ]);
     } catch (err) {
       setMessages((prev) => [
         ...prev,
@@ -175,7 +186,50 @@ export default function FloatingChatbot() {
                 {messages.map((msg, index) => (
                   <div key={index} className={`chatbot-bubble-wrapper ${msg.role}`}>
                     <div className="chatbot-bubble">
-                      <p>{msg.text}</p>
+                      <p className="chatbot-bubble-main-text">{msg.text}</p>
+                      
+                      {msg.recap && (
+                        <div className="chatbot-recap-box">
+                          <span className="chatbot-box-icon">🔄</span>
+                          <div className="chatbot-box-content">
+                            <strong>Recap:</strong> {msg.recap}
+                          </div>
+                        </div>
+                      )}
+
+                      {msg.sessionAnalysis && (
+                        <div className="chatbot-analysis-box">
+                          <span className="chatbot-box-icon">📊</span>
+                          <div className="chatbot-box-content">
+                            <strong>Session Analysis:</strong> {msg.sessionAnalysis}
+                          </div>
+                        </div>
+                      )}
+
+                      {msg.suggestedActivities && msg.suggestedActivities.length > 0 && (
+                        <div className="chatbot-suggestions-box">
+                          <span className="chatbot-box-icon">⚡</span>
+                          <div className="chatbot-box-content">
+                            <strong>Suggested Activities:</strong>
+                            <div className="chatbot-suggestions-tags">
+                              {msg.suggestedActivities.map((act, i) => (
+                                <span key={i} className="chatbot-suggestion-tag">{act}</span>
+                              ))}
+                            </div>
+                          </div>
+                        </div>
+                      )}
+
+                      {msg.workoutPlan && (
+                        <div className="chatbot-plan-box">
+                          <span className="chatbot-box-icon">🗓️</span>
+                          <div className="chatbot-box-content">
+                            <strong>Workout Plan:</strong>
+                            <pre className="chatbot-plan-pre">{msg.workoutPlan}</pre>
+                          </div>
+                        </div>
+                      )}
+
                       <span className="chatbot-bubble-time">{msg.time}</span>
                     </div>
                   </div>

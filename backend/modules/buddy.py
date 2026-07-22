@@ -5,7 +5,9 @@ from database import get_db, ChatHistory, User, WorkoutSession
 import random
 import os
 from google import genai
+from google.genai import types
 from dotenv import load_dotenv
+from typing import List, Optional
 
 load_dotenv()
 router = APIRouter()
@@ -26,6 +28,13 @@ except Exception as e:
 # ─────────────────────────────────────────────
 # Request Model
 # ─────────────────────────────────────────────
+class GeminiChatResponse(BaseModel):
+    reply: str = Field(..., description="A friendly, empathetic chat response addressing the user's message directly. Must be supportive and motivating.")
+    recap: Optional[str] = Field(None, description="A brief recap of what was discussed previously in the conversation or current context.")
+    session_analysis: Optional[str] = Field(None, description="An analysis of the user's logged workout session history, exercise performance, or consistency.")
+    suggested_activities: Optional[List[str]] = Field(None, description="A list of 2-4 recommended physical activities or exercises for the user's next session.")
+    workout_plan: Optional[str] = Field(None, description="A structured, day-by-day or week-by-week fitness session plan if requested, or a specific calendar plan.")
+
 class ChatRequest(BaseModel):
     username: str = Field(default="guest")
     message: str = Field(..., min_length=1)
@@ -38,6 +47,10 @@ class ChatResponse(BaseModel):
     sentiment_score: float
     history_used: int
     source: str
+    recap: Optional[str] = None
+    session_analysis: Optional[str] = None
+    suggested_activities: Optional[List[str]] = None
+    workout_plan: Optional[str] = None
 
 
 # ─────────────────────────────────────────────
@@ -163,6 +176,11 @@ def chat(data: ChatRequest, db: Session = Depends(get_db)):
     
     workout_text = "\n".join(workout_context) if workout_context else "No workouts logged yet."
 
+    recap = None
+    session_analysis = None
+    suggested_activities = None
+    workout_plan = None
+
     if USE_GEMINI and client is not None:
         try:
             bot_name = data.bot_name
@@ -185,29 +203,50 @@ def chat(data: ChatRequest, db: Session = Depends(get_db)):
             
             User's new message: "{data.message}"
             
-            Provide a short, highly motivating, and empathetic response (1-3 sentences maximum).
-            Naturally reference their progress, workout data, consistency, or goals if relevant.
-            Do not use markdown. Just reply as a friendly gym buddy speaking directly to them.
+            Please provide a response structured as JSON using the defined schema:
+            - reply: A friendly, highly motivating, and empathetic chat response (1-3 sentences) directly addressing their new message. Do not use markdown.
+            - recap: Summarize the key context of previous conversations, especially if the user is following up or continuing a topic.
+            - session_analysis: Analyze the user's recent workout and activity data (consistency, sets/reps, habit check-ins) and give encouragement or insights.
+            - suggested_activities: A list of 2-4 appropriate exercises or activities that align with their goals and current state.
+            - workout_plan: If the user explicitly asks for a workout schedule or plan, provide a clear structured plan. Otherwise, leave it null.
             """
             try:
                 response = client.models.generate_content(
                     model="gemini-1.5-pro",
-                    contents=prompt
+                    contents=prompt,
+                    config=types.GenerateContentConfig(
+                        response_mime_type="application/json",
+                        response_schema=GeminiChatResponse,
+                    )
                 )
             except Exception as e:
                 print("[WARN] gemini-1.5-pro failed, trying gemini-1.5-flash:", e)
                 try:
                     response = client.models.generate_content(
                         model="gemini-1.5-flash",
-                        contents=prompt
+                        contents=prompt,
+                        config=types.GenerateContentConfig(
+                            response_mime_type="application/json",
+                            response_schema=GeminiChatResponse,
+                        )
                     )
                 except Exception as e2:
                     print("[WARN] gemini-1.5-flash failed, trying gemini-2.5-flash:", e2)
                     response = client.models.generate_content(
                         model="gemini-2.5-flash",
-                        contents=prompt
+                        contents=prompt,
+                        config=types.GenerateContentConfig(
+                            response_mime_type="application/json",
+                            response_schema=GeminiChatResponse,
+                        )
                     )
-            reply = response.text.strip()
+            import json
+            ai_data = json.loads(response.text.strip())
+            reply = ai_data.get("reply", "")
+            recap = ai_data.get("recap")
+            session_analysis = ai_data.get("session_analysis")
+            suggested_activities = ai_data.get("suggested_activities")
+            workout_plan = ai_data.get("workout_plan")
             source = "gemini"
         except Exception as e:
             print("[WARN] Gemini failed, using fallback:", e)
@@ -242,5 +281,9 @@ def chat(data: ChatRequest, db: Session = Depends(get_db)):
         mood_detected=mood,
         sentiment_score=compound,
         history_used=len(history),
-        source=source
+        source=source,
+        recap=recap,
+        session_analysis=session_analysis,
+        suggested_activities=suggested_activities,
+        workout_plan=workout_plan
     )

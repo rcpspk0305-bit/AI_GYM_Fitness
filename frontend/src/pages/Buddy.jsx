@@ -58,7 +58,49 @@ function Bubble({ msg }) {
           color:      isUser ? "#ffffff" : "#1f2937",
           border:     isUser ? "none"    : "1px solid #e5e7eb",
           fontSize: 14, lineHeight: 1.65 }}>
-          {msg.text}
+          <p style={{ margin: 0 }}>{msg.text}</p>
+
+          {!isUser && msg.recap && (
+            <div className="chatbot-recap-box" style={{ marginTop: 10 }}>
+              <span className="chatbot-box-icon">🔄</span>
+              <div className="chatbot-box-content">
+                <strong>Recap:</strong> {msg.recap}
+              </div>
+            </div>
+          )}
+
+          {!isUser && msg.sessionAnalysis && (
+            <div className="chatbot-analysis-box" style={{ marginTop: 10 }}>
+              <span className="chatbot-box-icon">📊</span>
+              <div className="chatbot-box-content">
+                <strong>Session Analysis:</strong> {msg.sessionAnalysis}
+              </div>
+            </div>
+          )}
+
+          {!isUser && msg.suggestedActivities && msg.suggestedActivities.length > 0 && (
+            <div className="chatbot-suggestions-box" style={{ marginTop: 10 }}>
+              <span className="chatbot-box-icon">⚡</span>
+              <div className="chatbot-box-content">
+                <strong>Suggested Activities:</strong>
+                <div className="chatbot-suggestions-tags">
+                  {msg.suggestedActivities.map((act, i) => (
+                    <span key={i} className="chatbot-suggestion-tag">{act}</span>
+                  ))}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {!isUser && msg.workoutPlan && (
+            <div className="chatbot-plan-box" style={{ marginTop: 10 }}>
+              <span className="chatbot-box-icon">🗓️</span>
+              <div className="chatbot-box-content">
+                <strong>Workout Plan:</strong>
+                <pre className="chatbot-plan-pre">{msg.workoutPlan}</pre>
+              </div>
+            </div>
+          )}
         </div>
         {isUser && <SentimentBadge sentiment={msg.sentiment} />}
         <p style={{ fontSize: 11, color: "#9ca3af", margin: "4px 0 0",
@@ -121,16 +163,29 @@ export default function Buddy() {
     setLoading(true);
     try {
       const res = await axios.post(API, {
-      message: msg,
-      username,
+        message: msg,
+        username,
+        bot_name: "FitBot",
+        bot_gender: "neutral"
       });
-      const { reply, sentiment } = res.data;
+      const { reply, sentiment, recap, session_analysis, suggested_activities, workout_plan } = res.data;
       setMessages((prev) => {
         const updated = [...prev];
         updated[updated.length - 1] = { ...updated[updated.length - 1], sentiment };
         return updated;
       });
-      setMessages((prev) => [...prev, { role: "bot", text: reply, time: now() }]);
+      setMessages((prev) => [
+        ...prev, 
+        { 
+          role: "bot", 
+          text: reply, 
+          recap,
+          sessionAnalysis: session_analysis,
+          suggestedActivities: suggested_activities,
+          workoutPlan: workout_plan,
+          time: now() 
+        }
+      ]);
     } catch {
       setMessages((prev) => [...prev, {
         role: "bot", time: now(),
