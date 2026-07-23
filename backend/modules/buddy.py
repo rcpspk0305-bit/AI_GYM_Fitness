@@ -4,6 +4,8 @@ from sqlalchemy.orm import Session
 from database import get_db, ChatHistory, User, WorkoutSession
 import random
 import os
+import json
+import chromadb
 from google import genai
 from google.genai import types
 from dotenv import load_dotenv
@@ -24,6 +26,33 @@ try:
         USE_GEMINI = True
 except Exception as e:
     print("[WARN] Gemini setup failed in buddy:", e)
+
+# ─────────────────────────────────────────────
+# ChromaDB setup (RAG)
+# ─────────────────────────────────────────────
+collection = None
+try:
+    chroma_client = chromadb.PersistentClient(path="./chroma_db")
+    collection = chroma_client.get_or_create_collection(name="fitness_docs")
+    
+    # Pre-populate fitness collection if empty to ensure RAG has high quality content
+    if collection.count() == 0:
+        initial_docs = [
+            "Hypertrophy guidelines: For muscle growth, target 10-20 working sets per muscle group per week. Rep ranges of 6-12 are optimal, training close to failure (RPE 8-10). Ensure progressive overload by increasing weight, reps, or sets over time.",
+            "Cardio and fat loss: Combine high-intensity interval training (HIIT) with low-intensity steady-state cardio (LISS). Maintain a daily caloric deficit of 300-500 kcal for safe and sustainable fat loss.",
+            "Recovery and sleep: Recovery is where muscle growth happens. Ensure 7-9 hours of sleep, stay hydrated (3L+ water daily), and consume 1.6-2.2g of protein per kg of bodyweight.",
+            "Progressive overload: Gradually increase weight, reps, or sets over time to force adaptation. Never sacrifice form for weight.",
+            "Mind-muscle connection: Focus on feeling the target muscle contract during each rep. Squeeze at the top of the movement and control the descent."
+        ]
+        collection.add(
+            documents=initial_docs,
+            ids=[f"fit_tip_{i}" for i in range(len(initial_docs))]
+        )
+        print("[OK] Pre-populated ChromaDB fitness_docs collection")
+    else:
+        print("[OK] ChromaDB fitness_docs collection loaded with", collection.count(), "documents")
+except Exception as e:
+    print("[WARN] ChromaDB setup failed in buddy:", e)
 
 # ─────────────────────────────────────────────
 # Request Model
@@ -82,12 +111,10 @@ def calculate_compound_score(text: str) -> float:
 
 
 # ─────────────────────────────────────────────
-# Smart Reply Generator
+# Smart Reply Generator (Fallback)
 # ─────────────────────────────────────────────
 def generate_reply(message, mood, history):
     message = message.lower()
-
-    # Context awareness (use last message)
     last_user_msgs = [h.message for h in history if h.role == "user"][-3:]
 
     if mood == "tired":
@@ -96,14 +123,12 @@ def generate_reply(message, mood, history):
             "Low energy days happen. Try a light session instead of skipping completely.",
             "Your future self will thank you for doing even a small workout today."
         ])
-
     if mood == "sad":
         return random.choice([
             "Tough days hit everyone. Moving your body can actually help your mood.",
             "You’re doing better than you think. Start small today.",
             "One workout won’t fix everything, but it helps more than you expect."
         ])
-
     if mood == "happy":
         return random.choice([
             "That’s the energy I like. Use it for a strong workout today.",
@@ -111,13 +136,10 @@ def generate_reply(message, mood, history):
             "Ride this momentum and crush your session."
         ])
 
-    # Context-based responses
     if "gym" in message:
         return "Consistency beats motivation. Even if you don’t feel like it, just go."
-
     if "diet" in message or "food" in message:
         return "Focus on protein, hydration, and consistency. No extreme diets needed."
-
     if "plan" in message:
         return "Stick to your current plan for at least 2–3 weeks before changing anything."
 
@@ -139,7 +161,7 @@ def chat(data: ChatRequest, db: Session = Depends(get_db)):
     mood = detect_mood(data.message)
     compound = calculate_compound_score(data.message)
 
-    # Get last 10 messages
+    # Get last 10 messages for memory context
     history = (
         db.query(ChatHistory)
         .filter(ChatHistory.username == data.username)
@@ -147,7 +169,6 @@ def chat(data: ChatRequest, db: Session = Depends(get_db)):
         .limit(10)
         .all()
     )
-
     history = list(reversed(history))  # chronological order
     source = "rule-based"
 
@@ -176,6 +197,16 @@ def chat(data: ChatRequest, db: Session = Depends(get_db)):
     
     workout_text = "\n".join(workout_context) if workout_context else "No workouts logged yet."
 
+    # RAG lookup from ChromaDB
+    rag_context = ""
+    if collection is not None:
+        try:
+            rag_results = collection.query(query_texts=[data.message], n_results=2)
+            if rag_results and rag_results.get("documents") and rag_results["documents"][0]:
+                rag_context = "\n".join(rag_results["documents"][0])
+        except Exception as rag_err:
+            print("[WARN] RAG lookup failed in buddy:", rag_err)
+
     recap = None
     session_analysis = None
     suggested_activities = None
@@ -185,8 +216,8 @@ def chat(data: ChatRequest, db: Session = Depends(get_db)):
         try:
             bot_name = data.bot_name
             bot_gender = data.bot_gender
-            # Build history context using all history (up to 10 messages)
             history_text = "\n".join([f"{msg.role}: {msg.message}" for msg in history])
+            
             prompt = f"""
             You are {bot_name}, a supportive {bot_gender} AI gym buddy.
             
@@ -195,6 +226,9 @@ def chat(data: ChatRequest, db: Session = Depends(get_db)):
             
             Recent Workout & Activity Data:
             {workout_text}
+            
+            ChromaDB RAG Knowledge:
+            {rag_context}
             
             Current User Mood: {mood} (Sentiment Score: {compound:.2f})
             
@@ -210,46 +244,89 @@ def chat(data: ChatRequest, db: Session = Depends(get_db)):
             - suggested_activities: A list of 2-4 appropriate exercises or activities that align with their goals and current state.
             - workout_plan: If the user explicitly asks for a workout schedule or plan, provide a clear structured plan. Otherwise, leave it null.
             """
-            try:
-                response = client.models.generate_content(
-                    model="gemini-1.5-pro",
-                    contents=prompt,
-                    config=types.GenerateContentConfig(
-                        response_mime_type="application/json",
-                        response_schema=GeminiChatResponse,
-                    )
-                )
-            except Exception as e:
-                print("[WARN] gemini-1.5-pro failed, trying gemini-1.5-flash:", e)
+
+            # ─────────────────────────────────────────────
+            # Self-Looping Reflection & Correction Agent Loop
+            # ─────────────────────────────────────────────
+            max_loops = 2
+            current_loop = 0
+            critique = ""
+            ai_data = {}
+
+            while current_loop < max_loops:
+                loop_prompt = prompt
+                if critique:
+                    loop_prompt += f"\n\n[CRITIQUE FEEDBACK FOR CORRECTION]:\n{critique}\nPlease rewrite and fix the response JSON to satisfy these points."
+
+                # Choose best model (fallback cascade)
                 try:
                     response = client.models.generate_content(
-                        model="gemini-1.5-flash",
-                        contents=prompt,
+                        model="gemini-1.5-pro",
+                        contents=loop_prompt,
                         config=types.GenerateContentConfig(
                             response_mime_type="application/json",
                             response_schema=GeminiChatResponse,
                         )
                     )
-                except Exception as e2:
-                    print("[WARN] gemini-1.5-flash failed, trying gemini-2.5-flash:", e2)
+                except Exception:
                     response = client.models.generate_content(
                         model="gemini-2.5-flash",
-                        contents=prompt,
+                        contents=loop_prompt,
                         config=types.GenerateContentConfig(
                             response_mime_type="application/json",
                             response_schema=GeminiChatResponse,
                         )
                     )
-            import json
-            ai_data = json.loads(response.text.strip())
+
+                response_text = response.text.strip()
+                ai_data = json.loads(response_text)
+
+                # Critic evaluation step (Reflection)
+                critic_prompt = f"""
+                You are a strict quality controller. Analyze this AI gym buddy response JSON:
+                {response_text}
+                
+                Verify the following:
+                1. Is the reply empathetic, encouraging, and free of generic preambles?
+                2. Does the session_analysis match the user's actual workouts?
+                3. Are the suggested_activities specific?
+                4. If the user asked for a workout plan/schedule, is it fully detailed in workout_plan?
+                
+                Return JSON only conforming to this schema:
+                {{
+                  "passed": true or false,
+                  "critique": "what needs to be corrected, or empty if passed"
+                }}
+                """
+                
+                try:
+                    critic_res = client.models.generate_content(
+                        model="gemini-2.5-flash",
+                        contents=critic_prompt,
+                        config=types.GenerateContentConfig(
+                            response_mime_type="application/json"
+                        )
+                    )
+                    critic_data = json.loads(critic_res.text.strip())
+                    if critic_data.get("passed", True):
+                        break
+                    else:
+                        critique = critic_data.get("critique", "")
+                        print(f"[REFL] Loop {current_loop} failed criticism: {critique}")
+                        current_loop += 1
+                except Exception as critic_err:
+                    print("[WARN] Critic step failed, skipping evaluation:", critic_err)
+                    break
+
             reply = ai_data.get("reply", "")
             recap = ai_data.get("recap")
             session_analysis = ai_data.get("session_analysis")
             suggested_activities = ai_data.get("suggested_activities")
             workout_plan = ai_data.get("workout_plan")
-            source = "gemini"
+            source = "gemini-reflected" if current_loop > 0 else "gemini"
+            
         except Exception as e:
-            print("[WARN] Gemini failed, using fallback:", e)
+            print("[WARN] Gemini agent loop failed, using fallback:", e)
             reply = generate_reply(data.message, mood, history)
     else:
         reply = generate_reply(data.message, mood, history)
@@ -264,7 +341,7 @@ def chat(data: ChatRequest, db: Session = Depends(get_db)):
     )
     db.add(user_log)
 
-    # Save bot reply (bot compound is usually neutral/positive, set to 0.5 default)
+    # Save bot reply
     bot_log = ChatHistory(
         username=data.username,
         role="assistant",
@@ -273,7 +350,6 @@ def chat(data: ChatRequest, db: Session = Depends(get_db)):
         compound=0.5 
     )
     db.add(bot_log)
-
     db.commit()
 
     return ChatResponse(
@@ -286,4 +362,4 @@ def chat(data: ChatRequest, db: Session = Depends(get_db)):
         session_analysis=session_analysis,
         suggested_activities=suggested_activities,
         workout_plan=workout_plan
-    )
+    )
