@@ -238,7 +238,7 @@ def chat(data: ChatRequest, db: Session = Depends(get_db)):
             User's new message: "{data.message}"
             
             Please provide a response structured as JSON using the defined schema:
-            - reply: A friendly, highly motivating, and empathetic chat response (1-3 sentences) directly addressing their new message. Do not use markdown.
+            - reply: A friendly, highly motivating, and empathetic chat response (1-3 sentences) directly addressing their new message in the same language the user used (Telugu, Hindi, or English). Do not use markdown.
             - recap: Summarize the key context of previous conversations, especially if the user is following up or continuing a topic.
             - session_analysis: Analyze the user's recent workout and activity data (consistency, sets/reps, habit check-ins) and give encouragement or insights.
             - suggested_activities: A list of 2-4 appropriate exercises or activities that align with their goals and current state.
